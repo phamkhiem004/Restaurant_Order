@@ -1,4 +1,11 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Index('phone', ['phone'], { unique: true })
 @Index('email', ['email'], { unique: true })
@@ -26,20 +33,13 @@ export class User {
   @Column('enum', {
     name: 'role',
     enum: ['CUSTOMER', 'STAFF', 'ADMIN'],
-    default: () => "'CUSTOMER'",
+    default: 'CUSTOMER',
   })
   role: 'CUSTOMER' | 'STAFF' | 'ADMIN';
 
-  @Column('timestamp', {
-    name: 'created_at',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @Column('timestamp', {
-    name: 'updated_at',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
-  reservations: any;
 }

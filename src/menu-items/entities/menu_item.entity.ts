@@ -1,4 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Entity('menu_items')
 export class MenuItem {
@@ -25,19 +31,9 @@ export class MenuItem {
   })
   isActive: boolean | null;
 
-  @Column({
-    type: 'timestamp',
-    name: 'created_at',
-    nullable: true,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  createdAt: Date | null;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
-  @Column({
-    type: 'timestamp',
-    name: 'updated_at',
-    nullable: true,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  updatedAt: Date | null;
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 }

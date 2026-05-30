@@ -1,4 +1,11 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Index('table_number', ['tableNumber'], { unique: true })
 @Entity('dining_tables')
@@ -16,23 +23,13 @@ export class DiningTable {
     name: 'status',
     nullable: true,
     enum: ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE'],
-    default: () => "'AVAILABLE'",
+    default: 'AVAILABLE',
   })
   status: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | null;
 
-  @Column({
-    type: 'timestamp',
-    name: 'created_at',
-    nullable: true,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  createdAt: Date | null;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
-  @Column({
-    type: 'timestamp',
-    name: 'updated_at',
-    nullable: true,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  updatedAt: Date | null;
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 }

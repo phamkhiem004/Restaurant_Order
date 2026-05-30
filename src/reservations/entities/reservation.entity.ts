@@ -1,4 +1,11 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Index('user_id', ['userId'], {})
 @Index('table_id', ['tableId'], {})
@@ -23,21 +30,13 @@ export class Reservation {
     name: 'status',
     nullable: true,
     enum: ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED'],
-    default: () => "'PENDING'",
+    default: 'PENDING',
   })
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | null;
 
-  @Column('timestamp', {
-    name: 'created_at',
-    nullable: true,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  createdAt: Date | null;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
-  @Column('timestamp', {
-    name: 'updated_at',
-    nullable: true,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  updatedAt: Date | null;
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 }

@@ -1,4 +1,11 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Index('order_id', ['orderId'], {})
 @Entity('payments')
@@ -22,26 +29,16 @@ export class Payment {
     name: 'status',
     nullable: true,
     enum: ['PENDING', 'SUCCESS', 'FAILED'],
-    default: () => "'PENDING'",
+    default: 'PENDING',
   })
   status: 'PENDING' | 'SUCCESS' | 'FAILED' | null;
 
   @Column('varchar', { name: 'transaction_id', nullable: true, length: 100 })
   transactionId: string | null;
 
-  @Column({
-    type: 'timestamp',
-    name: 'created_at',
-    nullable: true,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  createdAt: Date | null;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
-  @Column({
-    type: 'timestamp',
-    name: 'updated_at',
-    nullable: true,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  updatedAt: Date | null;
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 }

@@ -1,9 +1,11 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   Index,
   OneToMany,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { OrderItem } from './order-item.entity';
 
@@ -24,7 +26,7 @@ export class Order {
     name: 'status',
     nullable: true,
     enum: ['NEW', 'PREPARING', 'SERVED', 'BILLED', 'PAID'],
-    default: () => "'NEW'",
+    default: 'NEW',
   })
   status: 'NEW' | 'PREPARING' | 'SERVED' | 'BILLED' | 'PAID' | null;
 
@@ -33,23 +35,15 @@ export class Order {
     nullable: true,
     precision: 10,
     scale: 2,
-    default: () => "'0.00'",
+    default: '0.00',
   })
   totalAmount: string | null;
 
-  @Column('timestamp', {
-    name: 'created_at',
-    nullable: true,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  createdAt: Date | null;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
-  @Column('timestamp', {
-    name: 'updated_at',
-    nullable: true,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  updatedAt: Date | null;
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 
   @OneToMany(() => OrderItem, (orderItems) => orderItems.order)
   orderItems: OrderItem[];
