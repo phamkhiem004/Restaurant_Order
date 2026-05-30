@@ -34,7 +34,9 @@ CREATE TABLE reservations (
     table_id INT, -- Có thể NULL nếu lúc đặt chưa xếp bàn cụ thể
     reservation_time DATETIME NOT NULL,
     guest_count INT NOT NULL,
+    end_time DATETIME NOT NULL,
     status ENUM('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED') DEFAULT 'PENDING',
+    notes VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

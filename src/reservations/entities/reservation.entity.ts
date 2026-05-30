@@ -23,6 +23,12 @@ export class Reservation {
   @Column('datetime', { name: 'reservation_time' })
   reservationTime: Date;
 
+  @Column('datetime', { name: 'end_time' })
+  endTime: Date;
+
+  @Column('varchar', { name: 'notes', nullable: true, length: 255 })
+  notes: string | null;
+
   @Column('int', { name: 'guest_count' })
   guestCount: number;
 

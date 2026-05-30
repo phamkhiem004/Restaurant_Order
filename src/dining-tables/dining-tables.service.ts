@@ -1,18 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { CreateDiningTableDto } from './dto/create-dining-table.dto';
 import { UpdateDiningTableDto } from './dto/update-dining-table.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DiningTable } from './entities/dining-table.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class DiningTablesService {
-  create(createDiningTableDto: CreateDiningTableDto) {
+  constructor(
+    @InjectRepository(DiningTable)
+    private readonly diningTableRepository: Repository<DiningTable>
+  ) {}
+  async create(createDiningTableDto: CreateDiningTableDto) {
     console.log(createDiningTableDto);
-    return 'This action adds a new diningTable';
+    return this.diningTableRepository.save(createDiningTableDto);
   }
 
-  findAll() {
-    return `This action returns all diningTables`;
+  async findAll() {
+    return await this.diningTableRepository.find();
   }
-
+  async findAvailableTables() {
+    return await this.diningTableRepository.find({where: {status: 'AVAILABLE'}});
+  }
   findOne(id: number) {
     return `This action returns a #${id} diningTable`;
   }
@@ -25,4 +34,6 @@ export class DiningTablesService {
   remove(id: number) {
     return `This action removes a #${id} diningTable`;
   }
+
+  
 }

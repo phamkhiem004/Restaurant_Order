@@ -16,15 +16,18 @@ export class DiningTablesController {
   constructor(private readonly diningTablesService: DiningTablesService) {}
 
   @Post()
-  create(@Body() createDiningTableDto: CreateDiningTableDto) {
+  async create(@Body() createDiningTableDto: CreateDiningTableDto) {
     return this.diningTablesService.create(createDiningTableDto);
   }
 
   @Get()
-  findAll() {
-    return this.diningTablesService.findAll();
+  async findAll() {
+    return await this.diningTablesService.findAll();
   }
-
+  @Get('/available')
+  async findAvailableTables() {
+    return await this.diningTablesService.findAvailableTables();
+  }
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.diningTablesService.findOne(+id);
@@ -42,4 +45,6 @@ export class DiningTablesController {
   remove(@Param('id') id: string) {
     return this.diningTablesService.remove(+id);
   }
+
+  
 }
