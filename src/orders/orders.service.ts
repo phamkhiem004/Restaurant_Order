@@ -1,12 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Order } from './entities/order.entity';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrderItem } from './entities/order-item.entity';
 import { MenuItem } from 'src/menu-items/entities/menu_item.entity';
 import { OrderItemStatus, UpdateOrderItemStatusDto } from './dto/update-order-status.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { Reservation } from 'src/reservations/entities/reservation.entity';
+import { DiningTable } from 'src/dining-tables/entities/dining-table.entity';
 
 @Injectable()
 export class OrdersService {
@@ -17,12 +19,66 @@ export class OrdersService {
     private orderItemRepository: Repository<OrderItem>,
     @InjectRepository(MenuItem)
     private menuItemRepository: Repository<MenuItem>,
+    @InjectRepository(DiningTable)
+    private diningTableRepository: Repository<DiningTable>,
+    @InjectRepository(Reservation)
+    private reservationRepository: Repository<Reservation>,
   ) {}
 
   async create(createOrderDto: CreateOrderDto) {
   const { tableId, note, items, reservationId } = createOrderDto;
 
-const validMenuItems: { dtoQuantity: number; dbData: MenuItem }[] = [];
+  const table = await this.diningTableRepository.findOne({ where: { id: tableId } });
+    if (!table) {
+      throw new NotFoundException(`Bàn ID ${tableId} không tồn tại!`);
+    }
+
+    if (table.status !== 'AVAILABLE') {
+      throw new BadRequestException(`Bàn ID ${tableId} hiện không trống (Đang ở trạng thái ${table.status})!`);
+    }
+
+    if (reservationId) {
+    const reservation = await this.reservationRepository.findOne({ where: { id: reservationId } });
+    
+    if (!reservation) {
+      throw new NotFoundException(`Đơn đặt bàn ID ${reservationId} không tồn tại!`);
+    }
+
+    if (reservation.tableId !== tableId) {
+      throw new BadRequestException(
+        `Sai thông tin! Đơn đặt bàn ID ${reservationId} là của Bàn ID ${reservation.tableId}, không phải của Bàn ID ${tableId}.`
+      );
+    }
+
+    if (reservation.status !== 'CONFIRMED' && reservation.status !== 'PENDING') {
+      throw new BadRequestException(
+        `Không thể sử dụng Đơn đặt bàn ID ${reservationId} vì nó đang ở trạng thái '${reservation.status}'!`
+      );
+    }
+  }
+    
+
+
+    if (!reservationId) {
+      const now = new Date();
+      const nextTwoHours = new Date(now.getTime() + 2 * 60 * 60000); 
+
+      const upcomingReservation = await this.reservationRepository.findOne({
+        where: {
+          tableId: tableId,
+          status: 'CONFIRMED',
+          reservationTime: Between(now, nextTwoHours),
+        },
+      });
+
+      if (upcomingReservation) {
+        throw new BadRequestException(
+          `Không thể mở bàn! Bàn này đã có người đặt trước vào lúc ${upcomingReservation.reservationTime.toISOString()}.`
+        );
+      }
+    }
+
+  const validMenuItems: { dtoQuantity: number; dbData: MenuItem }[] = [];
 
   for (const item of items) {
     const menuItem = await this.menuItemRepository.findOne({
@@ -66,8 +122,14 @@ const validMenuItems: { dtoQuantity: number; dbData: MenuItem }[] = [];
   savedOrder.totalAmount = calculatedTotal;
   await this.orderRepository.save(savedOrder);
 
+  await this.diningTableRepository.update(tableId, { status: 'OCCUPIED' as any }); 
+   
+    if (reservationId) {
+      await this.reservationRepository.update(reservationId, { status: 'COMPLETED' as any });
+    }
+
   return {
-    message: 'Tạo đơn hàng thành công!',
+    message: 'Tạo đơn hàng thành công và đã khóa bàn sang trạng thái OCCUPIED!',
     order: savedOrder,
     items: orderItems
   };

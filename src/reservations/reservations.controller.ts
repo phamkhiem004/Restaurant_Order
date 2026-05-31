@@ -10,6 +10,7 @@ import {
 import { ReservationsService } from './reservations.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
+import { UpdateReservationStatusDto } from './dto/update-reservation-status.dto';
 
 @Controller('reservations')
 export class ReservationsController {
@@ -28,6 +29,14 @@ export class ReservationsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.reservationsService.findOne(+id);
+  }
+
+  @Patch('/:id/status')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() updateStatusDto: UpdateReservationStatusDto,
+  ) {
+    return await this.reservationsService.updateStatus(+id, updateStatusDto);
   }
 
   @Patch(':id')

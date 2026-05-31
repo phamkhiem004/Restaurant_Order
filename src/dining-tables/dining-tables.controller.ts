@@ -28,6 +28,10 @@ export class DiningTablesController {
   async findAvailableTables() {
     return await this.diningTablesService.findAvailableTables();
   }
+  @Get('/map')
+  async getTableMap() {
+    return this.diningTablesService.getTableMap();
+  }
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.diningTablesService.findOne(+id);

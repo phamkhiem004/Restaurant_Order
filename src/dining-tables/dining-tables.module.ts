@@ -3,9 +3,10 @@ import { DiningTablesService } from './dining-tables.service';
 import { DiningTablesController } from './dining-tables.controller';
 import { DiningTable } from './entities/dining-table.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Reservation } from 'src/reservations/entities/reservation.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DiningTable])],
+  imports: [TypeOrmModule.forFeature([DiningTable, Reservation])],
   controllers: [DiningTablesController],
   providers: [DiningTablesService],
 })

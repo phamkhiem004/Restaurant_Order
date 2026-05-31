@@ -21,5 +21,5 @@ export class CreateReservationDto {
   @Min(1, { message: 'Số lượng khách ít nhất phải là 1' })
   guestCount: number;
 
-  note?: string;
+  notes?: string;
 }
