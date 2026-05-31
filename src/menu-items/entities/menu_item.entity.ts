@@ -18,7 +18,15 @@ export class MenuItem {
   description: string | null;
 
   @Column('decimal', { name: 'price', precision: 10, scale: 2 })
-  price: string;
+  price: number;
+
+  // 1. CỘT MỚI: Giá sau khi giảm (Cho phép null vì không phải lúc nào cũng sale)
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  sale_price: number;
+
+  // 2. CỘT MỚI: Cờ (Flag) bật/tắt chế độ Flash Sale
+  @Column({ type: 'boolean', default: false })
+  is_flash_sale: boolean;
 
   @Column('varchar', { name: 'category', nullable: true, length: 50 })
   category: string | null;

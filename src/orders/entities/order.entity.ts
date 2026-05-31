@@ -37,7 +37,9 @@ export class Order {
     scale: 2,
     default: '0.00',
   })
-  totalAmount: string | null;
+  totalAmount: number | null;
+  @Column('text', { name: 'note', nullable: true })
+  note: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
