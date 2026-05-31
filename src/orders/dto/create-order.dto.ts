@@ -20,6 +20,10 @@ export class CreateOrderDto {
   @IsString()
   note?: string;
 
+  @IsOptional()
+  @IsInt()
+  reservationId?: number;
+
   @IsArray()
   @ArrayMinSize(1, { message: 'Đơn hàng phải có ít nhất 1 món ăn' }) 
   @ValidateNested({ each: true })

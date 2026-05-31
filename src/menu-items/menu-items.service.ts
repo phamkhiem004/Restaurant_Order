@@ -12,8 +12,7 @@ export class MenuItemsService {
     private readonly menuItemRepository: Repository<MenuItem>
   ) {}
   create(createMenuItemDto: CreateMenuItemDto) {
-    console.log(createMenuItemDto);
-    return 'This action adds a new menuItem';
+    return this.menuItemRepository.save(createMenuItemDto);
   }
 
   async findAll() {
@@ -25,8 +24,7 @@ export class MenuItemsService {
   }
 
   update(id: number, updateMenuItemDto: UpdateMenuItemDto) {
-    console.log(updateMenuItemDto);
-    return `This action updates a #${id} menuItem`;
+    return this.menuItemRepository.update(id, updateMenuItemDto);
   }
 
   remove(id: number) {

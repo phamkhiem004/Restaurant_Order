@@ -6,10 +6,12 @@ import {
   Patch,
   Param,
   Delete,
+  ParseIntPipe
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { UpdateOrderItemStatusDto } from './dto/update-order-status.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -33,6 +35,13 @@ export class OrdersController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.ordersService.findOne(+id);
+  }
+  @Patch('/items/:itemId/status')
+  async updateItemStatus(
+    @Param('itemId', ParseIntPipe) itemId: number,
+    @Body() updateDto: UpdateOrderItemStatusDto
+  ) {
+    return this.ordersService.updateItemStatus(itemId, updateDto);
   }
 
   @Patch(':id')
