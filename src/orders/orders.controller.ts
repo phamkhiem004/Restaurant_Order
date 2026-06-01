@@ -12,6 +12,8 @@ import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { UpdateOrderItemStatusDto } from './dto/update-order-status.dto';
+import { AddItemsToOrderDto } from './dto/add-items-to-order.dto';
+import { UpdateItemQuantityDto } from './dto/update-item-quantity.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -20,6 +22,13 @@ export class OrdersController {
   @Post()
   create(@Body() createOrderDto: CreateOrderDto) {
     return this.ordersService.create(createOrderDto);
+  }
+  @Post(':id/add-items')
+  async addItems(
+    @Param('id', ParseIntPipe) orderId: number,
+    @Body() addItemsDto: AddItemsToOrderDto
+  ) {
+    return await this.ordersService.addItemsToOrder(orderId, addItemsDto);
   }
 
   @Get('/order')
@@ -42,6 +51,22 @@ export class OrdersController {
     @Body() updateDto: UpdateOrderItemStatusDto
   ) {
     return this.ordersService.updateItemStatus(itemId, updateDto);
+  }
+  @Patch(':orderId/items/:itemId/quantity')
+  async updateQuantity(
+    @Param('orderId', ParseIntPipe) orderId: number,
+    @Param('itemId', ParseIntPipe) itemId: number,
+    @Body() updateDto: UpdateItemQuantityDto
+  ) {
+    return await this.ordersService.updateItemQuantity(orderId, itemId, updateDto);
+  }
+
+  @Patch(':orderId/items/:itemId/cancel')
+  async cancelItem(
+    @Param('orderId', ParseIntPipe) orderId: number,
+    @Param('itemId', ParseIntPipe) itemId: number
+  ) {
+    return await this.ordersService.cancelOrderItem(orderId, itemId);
   }
 
   @Patch(':id')

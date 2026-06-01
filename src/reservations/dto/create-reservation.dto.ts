@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsDateString, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsDateString, Min, IsString, IsOptional } from 'class-validator';
 
 export class CreateReservationDto {
   @IsNotEmpty()
@@ -21,5 +21,8 @@ export class CreateReservationDto {
   @Min(1, { message: 'Số lượng khách ít nhất phải là 1' })
   guestCount: number;
 
+
+  @IsOptional()
+  @IsString()
   notes?: string;
 }

@@ -32,10 +32,10 @@ export class OrderItem {
   @Column('enum', {
     name: 'status',
     nullable: true,
-    enum: ['PENDING', 'COOKING', 'DONE'],
+    enum: ['PENDING', 'COOKING', 'DONE', 'CANCELLED'],
     default: 'PENDING',
   })
-  status: 'PENDING' | 'COOKING' | 'DONE' | null;
+  status: 'PENDING' | 'COOKING' | 'DONE' | 'CANCELLED' | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
