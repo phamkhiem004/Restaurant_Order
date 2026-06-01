@@ -18,9 +18,9 @@ export class Payment {
 
   @Column('enum', {
     name: 'payment_method',
-    enum: ['CASH', 'CREDIT_CARD', 'TRANSFER'],
+    enum: ['CASH', 'CREDIT_CARD', 'TRANSFER','VNPAY'],
   })
-  paymentMethod: 'CASH' | 'CREDIT_CARD' | 'TRANSFER';
+  paymentMethod: 'CASH' | 'CREDIT_CARD' | 'TRANSFER' | 'VNPAY';
 
   @Column('decimal', { name: 'amount', precision: 10, scale: 2 })
   amount: string;
@@ -35,6 +35,9 @@ export class Payment {
 
   @Column('varchar', { name: 'transaction_id', nullable: true, length: 100 })
   transactionId: string | null;
+
+  @Column('varchar', { name: 'vnp_txn_ref', nullable: true, length: 100 })
+  vnpTxnRef: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

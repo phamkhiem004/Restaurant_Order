@@ -9,6 +9,7 @@ import { DiningTablesModule } from './dining-tables/dining-tables.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
+import { VnpayModule } from './vnpay/vnpay.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { PaymentsModule } from './payments/payments.module';
     ReservationsModule,
     OrdersModule,
     PaymentsModule,
+    VnpayModule,
   ],
   controllers: [AppController],
   providers: [AppService],

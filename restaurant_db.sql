@@ -91,10 +91,11 @@ CREATE TABLE order_items (
 CREATE TABLE payments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
-    payment_method ENUM('CASH', 'CREDIT_CARD', 'TRANSFER') NOT NULL,
+    payment_method ENUM('CASH', 'CREDIT_CARD', 'TRANSFER','VNPAY') NOT NULL,
     amount DECIMAL(10, 2) NOT NULL,
     status ENUM('PENDING', 'SUCCESS', 'FAILED') DEFAULT 'PENDING',
-    transaction_id VARCHAR(100), -- Mã giao dịch từ VNPay/Momo (nếu có)
+    transaction_id VARCHAR(100),
+    vnp_txn_ref VARCHAR(100) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
