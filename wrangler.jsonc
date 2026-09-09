@@ -11,7 +11,12 @@
     "REALTIMEKIT_HOST_PRESET": "group_call_host",
   },
   "build": {
-    "command": "npm run build:worker",
+    "command": "npm run build:cloudflare",
+  },
+  "assets": {
+    "directory": "./frontend/out",
+    "binding": "ASSETS",
+    "run_worker_first": true,
   },
   "alias": {
     "@nestjs/websockets/socket-module": "./src/cloudflare/optional-nest-module.ts",

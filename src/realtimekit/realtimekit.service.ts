@@ -2,7 +2,6 @@ import {
   BadGatewayException,
   Injectable,
   ServiceUnavailableException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CreateDemoMeetingDto } from './dto/create-demo-meeting.dto';
@@ -48,18 +47,6 @@ export interface RealtimeKitParticipant {
 @Injectable()
 export class RealtimeKitService {
   constructor(private readonly configService: ConfigService) {}
-
-  authorize(demoKey: string | undefined): void {
-    const expectedKey = this.configService.get<string>('REALTIMEKIT_DEMO_KEY');
-    if (!expectedKey) {
-      throw new ServiceUnavailableException(
-        'REALTIMEKIT_DEMO_KEY has not been configured.',
-      );
-    }
-    if (!demoKey || demoKey !== expectedKey) {
-      throw new UnauthorizedException('Invalid x-demo-key header.');
-    }
-  }
 
   async createMeeting(dto: CreateMeetingDto): Promise<RealtimeKitMeeting> {
     return this.request<RealtimeKitMeeting>('/meetings', {

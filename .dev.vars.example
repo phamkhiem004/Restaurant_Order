@@ -7,3 +7,7 @@ VNP_RETURN_URL=http://localhost:8787/vnpay/vnpay-return
 # Create a Cloudflare API token with Realtime permissions.
 REALTIMEKIT_API_TOKEN=replace-me
 REALTIMEKIT_DEMO_KEY=replace-with-a-random-secret
+
+# Redis-compatible REST API. Upstash REST works in Cloudflare Workers.
+UPSTASH_REDIS_REST_URL=https://replace-me.upstash.io
+UPSTASH_REDIS_REST_TOKEN=replace-me

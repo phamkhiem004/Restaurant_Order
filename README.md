@@ -1,7 +1,8 @@
-# Restaurant Order API
+# Restaurant Order
 
 NestJS backend adapted to run directly on Cloudflare Workers with Cloudflare
-D1. It does not require a Container, MySQL server, or Hyperdrive.
+D1, plus a Next.js frontend exported as static assets. It does not require a
+Container, MySQL server, or Hyperdrive.
 
 ## Local development
 
@@ -13,7 +14,7 @@ npm run db:migrate:local
 npm run dev:worker
 ```
 
-The API is then available at `http://localhost:8787`.
+The frontend and API are then available at `http://localhost:8787`.
 
 Useful test endpoints:
 
@@ -86,26 +87,37 @@ an auth token. It also serves a small browser test page using Cloudflare's
 RealtimeKit UI Kit.
 
 Create a Cloudflare API token with `Realtime` or `Realtime Admin` permission,
-then configure both Worker secrets:
+then configure the Worker secret:
 
 ```bash
 npx wrangler secret put REALTIMEKIT_API_TOKEN
-npx wrangler secret put REALTIMEKIT_DEMO_KEY
 ```
 
-Create a meeting and participant in one request:
+Meeting endpoints require an authenticated session. `STAFF` and `ADMIN` users
+can create a host meeting. `CUSTOMER` users can only join as guests, even if
+they modify the requested role in the browser.
+
+## Login, roles, and Redis sessions
+
+Users and roles (`CUSTOMER`, `STAFF`, `ADMIN`) are stored in D1. Session tokens
+are stored in Upstash Redis for seven days and sent to the browser in an
+`HttpOnly`, `SameSite=Lax` cookie.
+
+Create an Upstash Redis database, copy its REST credentials, and save them as
+Worker secrets:
 
 ```bash
-curl -X POST https://restaurant-order.tula5904.workers.dev/realtimekit/quick-start \
-  -H "Content-Type: application/json" \
-  -H "x-demo-key: YOUR_DEMO_KEY" \
-  -d '{"title":"Demo meeting","name":"Khiem","role":"host"}'
+npx wrangler secret put UPSTASH_REDIS_REST_URL
+npx wrangler secret put UPSTASH_REDIS_REST_TOKEN
 ```
 
-Open the returned `joinUrl` in a browser to test camera, microphone, screen
-sharing, and the permissions associated with the selected preset. Valid roles
-are `host` and `guest`. The API token remains server-side and is never returned
-to the browser.
+If Redis is temporarily unreachable, the session store falls back to the D1
+`auth_sessions` table so users can still sign in. Configure a production
+Upstash database to make Redis the primary session store.
+
+The frontend source is under `frontend/`. `npm run build:frontend` creates its
+static export, and `npm run deploy` builds both Next.js and the Worker before
+uploading them together to the same `workers.dev` domain.
 
 ## Database migration note
 

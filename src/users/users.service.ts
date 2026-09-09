@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,11 +14,21 @@ export class UsersService {
   ) {}
   async create(createUserDto: CreateUserDto) {
     const { password, ...userData } = createUserDto;
+    const email = userData.email.trim().toLowerCase();
+    const phone = userData.phone.trim();
+    if (await this.userRepository.findOne({ where: { email } })) {
+      throw new ConflictException('Email đã được sử dụng.');
+    }
+    if (await this.userRepository.findOne({ where: { phone } })) {
+      throw new ConflictException('Số điện thoại đã được sử dụng.');
+    }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = this.userRepository.create({
       ...userData,
+      email,
+      phone,
       password: hashedPassword,
     });
     return this.withoutPassword(await this.userRepository.save(newUser));

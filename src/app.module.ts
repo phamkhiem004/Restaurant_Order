@@ -2,6 +2,7 @@ import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
 import { D1DatabaseModule } from './database/d1.module';
 import { DiningTablesModule } from './dining-tables/dining-tables.module';
 import { MenuItemsModule } from './menu-items/menu-items.module';
@@ -20,6 +21,7 @@ export class AppModule {
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         D1DatabaseModule.forRoot(database),
+        AuthModule,
         UsersModule,
         MenuItemsModule,
         DiningTablesModule,

@@ -1,6 +1,8 @@
 # compiled output
 /dist
 /dist-worker
+/frontend/.next
+/frontend/out
 /.wrangler
 /node_modules
 /build

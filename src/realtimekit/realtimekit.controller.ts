@@ -3,16 +3,22 @@ import {
   Controller,
   Get,
   Header,
-  Headers,
   Param,
   Post,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { SessionAuthGuard } from '../auth/session-auth.guard';
+import type { AuthenticatedRequest } from '../auth/auth.types';
 import { CreateDemoMeetingDto } from './dto/create-demo-meeting.dto';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
-import { CreateParticipantDto } from './dto/create-participant.dto';
+import {
+  CreateParticipantDto,
+  RealtimeKitRole,
+} from './dto/create-participant.dto';
 import { RealtimeKitService } from './realtimekit.service';
 
 @Controller('realtimekit')
@@ -20,33 +26,41 @@ export class RealtimeKitController {
   constructor(private readonly realtimeKitService: RealtimeKitService) {}
 
   @Post('meetings')
-  createMeeting(
-    @Headers('x-demo-key') demoKey: string | undefined,
-    @Body() dto: CreateMeetingDto,
-  ) {
-    this.realtimeKitService.authorize(demoKey);
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
+  createMeeting(@Body() dto: CreateMeetingDto) {
     return this.realtimeKitService.createMeeting(dto);
   }
 
   @Post('meetings/:meetingId/participants')
+  @UseGuards(SessionAuthGuard)
   addParticipant(
-    @Headers('x-demo-key') demoKey: string | undefined,
     @Param('meetingId') meetingId: string,
     @Body() dto: CreateParticipantDto,
+    @Req() request: AuthenticatedRequest,
   ) {
-    this.realtimeKitService.authorize(demoKey);
-    return this.realtimeKitService.addParticipant(meetingId, dto);
+    const role =
+      request.user.role === 'CUSTOMER' ? RealtimeKitRole.GUEST : dto.role;
+    return this.realtimeKitService.addParticipant(meetingId, {
+      ...dto,
+      role,
+      customParticipantId: `user-${request.user.id}-${crypto.randomUUID()}`,
+    });
   }
 
   @Post('quick-start')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @Roles('STAFF', 'ADMIN')
   createDemo(
-    @Headers('x-demo-key') demoKey: string | undefined,
     @Body() dto: CreateDemoMeetingDto,
-    @Req() request: Request,
+    @Req() request: AuthenticatedRequest,
   ) {
-    this.realtimeKitService.authorize(demoKey);
     return this.realtimeKitService.createDemo(
-      dto,
+      {
+        ...dto,
+        role: RealtimeKitRole.HOST,
+        customParticipantId: `user-${request.user.id}-${crypto.randomUUID()}`,
+      },
       request.protocol + '://' + request.get('host'),
     );
   }

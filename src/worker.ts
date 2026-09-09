@@ -6,6 +6,7 @@ type NodeHttpHandler = ReturnType<typeof httpServerHandler>;
 
 interface WorkerEnv {
   DB: D1Database;
+  ASSETS: Fetcher;
   VNP_TMN_CODE?: string;
   VNP_HASH_SECRET?: string;
   VNP_URL?: string;
@@ -16,6 +17,8 @@ interface WorkerEnv {
   REALTIMEKIT_DEMO_KEY?: string;
   REALTIMEKIT_GUEST_PRESET?: string;
   REALTIMEKIT_HOST_PRESET?: string;
+  UPSTASH_REDIS_REST_URL?: string;
+  UPSTASH_REDIS_REST_TOKEN?: string;
   NODE_ENV?: string;
 }
 
@@ -31,13 +34,15 @@ function copyBindingToProcessEnv(env: WorkerEnv): void {
     'REALTIMEKIT_DEMO_KEY',
     'REALTIMEKIT_GUEST_PRESET',
     'REALTIMEKIT_HOST_PRESET',
+    'UPSTASH_REDIS_REST_URL',
+    'UPSTASH_REDIS_REST_TOKEN',
     'NODE_ENV',
   ] as const;
 
   for (const name of variableNames) {
     const value = env[name];
     if (value !== undefined) {
-      process.env[name] = value;
+      (process.env as Record<string, string | undefined>)[name] = value;
     }
   }
 }
@@ -88,6 +93,11 @@ export default {
     // Verify a deployed Worker without first requiring a database connection.
     if (url.pathname === '/health') {
       return Response.json({ status: 'ok', runtime: 'cloudflare-workers' });
+    }
+
+    if (request.method === 'GET' || request.method === 'HEAD') {
+      const assetResponse = await env.ASSETS.fetch(request);
+      if (assetResponse.status !== 404) return assetResponse;
     }
 
     return handleNestRequest(request, env, ctx);
