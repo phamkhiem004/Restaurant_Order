@@ -19,6 +19,11 @@ function HostWaitingRoomControls() {
     client.participants.waitlisted.toArray(),
   );
   const [actionError, setActionError] = useState('');
+  const [isCollapsed, setIsCollapsed] = useState(true);
+
+  useEffect(() => {
+    if (waitingParticipants.length > 0) setIsCollapsed(false);
+  }, [waitingParticipants.length]);
 
   if (!canAcceptRequests) return null;
 
@@ -48,31 +53,48 @@ function HostWaitingRoomControls() {
 
   return (
     <aside
-      className={`waiting-room-card ${waitingParticipants.length ? 'has-requests' : ''}`}
+      className={`waiting-room-card ${waitingParticipants.length ? 'has-requests' : ''} ${isCollapsed ? 'is-collapsed' : ''}`}
     >
-      <strong>Phòng chờ: {waitingParticipants.length}</strong>
-      <span className="waiting-meeting-id" title={meetingId}>
-        Meeting: {meetingId}
-      </span>
+      <button
+        className="waiting-room-toggle"
+        type="button"
+        aria-expanded={!isCollapsed}
+        onClick={() => setIsCollapsed((current) => !current)}
+      >
+        <strong>Phòng chờ: {waitingParticipants.length}</strong>
+        <span aria-hidden="true">{isCollapsed ? '▾' : '▴'}</span>
+      </button>
 
-      {waitingParticipants.map((participant) => (
-        <div className="waiting-person" key={participant.id}>
-          <span>{participant.name || 'Khách chưa đặt tên'}</span>
-          <div>
-            <button onClick={() => acceptParticipant(participant.id)}>
-              Chấp nhận
-            </button>
-            <button
-              className="reject"
-              onClick={() => rejectParticipant(participant.id)}
-            >
-              Từ chối
-            </button>
-          </div>
+      {!isCollapsed && (
+        <div className="waiting-room-content">
+          <span className="waiting-meeting-id" title={meetingId}>
+            Meeting: {meetingId}
+          </span>
+
+          {waitingParticipants.length === 0 && (
+            <span className="waiting-empty">Chưa có yêu cầu tham gia.</span>
+          )}
+
+          {waitingParticipants.map((participant) => (
+            <div className="waiting-person" key={participant.id}>
+              <span>{participant.name || 'Khách chưa đặt tên'}</span>
+              <div>
+                <button onClick={() => acceptParticipant(participant.id)}>
+                  Chấp nhận
+                </button>
+                <button
+                  className="reject"
+                  onClick={() => rejectParticipant(participant.id)}
+                >
+                  Từ chối
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {actionError && <small>{actionError}</small>}
         </div>
-      ))}
-
-      {actionError && <small>{actionError}</small>}
+      )}
     </aside>
   );
 }
