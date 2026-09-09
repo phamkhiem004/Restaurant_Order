@@ -7,6 +7,7 @@ import { DiningTablesModule } from './dining-tables/dining-tables.module';
 import { MenuItemsModule } from './menu-items/menu-items.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
+import { RealtimeKitModule } from './realtimekit/realtimekit.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { UsersModule } from './users/users.module';
 import { VnpayModule } from './vnpay/vnpay.module';
@@ -25,6 +26,7 @@ export class AppModule {
         ReservationsModule,
         OrdersModule,
         PaymentsModule,
+        RealtimeKitModule,
         VnpayModule,
       ],
       controllers: [AppController],

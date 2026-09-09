@@ -5,6 +5,10 @@
   "compatibility_date": "2026-09-08",
   "vars": {
     "NODE_ENV": "production",
+    "CLOUDFLARE_ACCOUNT_ID": "42b28ab2f9dba1c757ed380ca4fb5389",
+    "REALTIMEKIT_APP_ID": "2cd985f8-e456-448b-8e36-2ec4ccaf0fd1",
+    "REALTIMEKIT_GUEST_PRESET": "group_call_guest",
+    "REALTIMEKIT_HOST_PRESET": "group_call_host",
   },
   "build": {
     "command": "npm run build:worker",

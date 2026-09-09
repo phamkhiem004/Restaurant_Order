@@ -10,6 +10,12 @@ interface WorkerEnv {
   VNP_HASH_SECRET?: string;
   VNP_URL?: string;
   VNP_RETURN_URL?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  REALTIMEKIT_APP_ID?: string;
+  REALTIMEKIT_API_TOKEN?: string;
+  REALTIMEKIT_DEMO_KEY?: string;
+  REALTIMEKIT_GUEST_PRESET?: string;
+  REALTIMEKIT_HOST_PRESET?: string;
   NODE_ENV?: string;
 }
 
@@ -19,6 +25,12 @@ function copyBindingToProcessEnv(env: WorkerEnv): void {
     'VNP_HASH_SECRET',
     'VNP_URL',
     'VNP_RETURN_URL',
+    'CLOUDFLARE_ACCOUNT_ID',
+    'REALTIMEKIT_APP_ID',
+    'REALTIMEKIT_API_TOKEN',
+    'REALTIMEKIT_DEMO_KEY',
+    'REALTIMEKIT_GUEST_PRESET',
+    'REALTIMEKIT_HOST_PRESET',
     'NODE_ENV',
   ] as const;
 

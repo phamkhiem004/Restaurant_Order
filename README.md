@@ -79,6 +79,34 @@ https://restaurant-order.tula5904.workers.dev/vnpay/vnpay-return
 
 `VNP_URL` is optional and defaults to the VNPAY sandbox URL.
 
+## RealtimeKit meeting demo
+
+The backend can create a meeting, add a host or guest participant, and return
+an auth token. It also serves a small browser test page using Cloudflare's
+RealtimeKit UI Kit.
+
+Create a Cloudflare API token with `Realtime` or `Realtime Admin` permission,
+then configure both Worker secrets:
+
+```bash
+npx wrangler secret put REALTIMEKIT_API_TOKEN
+npx wrangler secret put REALTIMEKIT_DEMO_KEY
+```
+
+Create a meeting and participant in one request:
+
+```bash
+curl -X POST https://restaurant-order.tula5904.workers.dev/realtimekit/quick-start \
+  -H "Content-Type: application/json" \
+  -H "x-demo-key: YOUR_DEMO_KEY" \
+  -d '{"title":"Demo meeting","name":"Khiem","role":"host"}'
+```
+
+Open the returned `joinUrl` in a browser to test camera, microphone, screen
+sharing, and the permissions associated with the selected preset. Valid roles
+are `host` and `guest`. The API token remains server-side and is never returned
+to the browser.
+
 ## Database migration note
 
 `restaurant_db.sql` is the original MySQL schema and is retained only as a
