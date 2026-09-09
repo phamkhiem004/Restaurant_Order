@@ -21,15 +21,17 @@ export class UsersService {
       ...userData,
       password: hashedPassword,
     });
-    return await this.userRepository.save(newUser);
+    return this.withoutPassword(await this.userRepository.save(newUser));
   }
 
   async findAll() {
-    return await this.userRepository.find();
+    const users = await this.userRepository.find();
+    return users.map((user) => this.withoutPassword(user));
   }
 
   async findOne(id: number) {
-    return await this.userRepository.findOne({ where: { id: id } });
+    const user = await this.userRepository.findOne({ where: { id: id } });
+    return user ? this.withoutPassword(user) : null;
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
@@ -52,5 +54,11 @@ export class UsersService {
 
   remove(id: number) {
     return `This action removes a #${id} user`;
+  }
+
+  private withoutPassword(user: User) {
+    const safeUser: Partial<User> = { ...user };
+    delete safeUser.password;
+    return safeUser;
   }
 }

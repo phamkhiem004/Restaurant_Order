@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "nest-demo",
+  "name": "restaurant-order",
   "main": "dist-worker/worker.js",
   "compatibility_date": "2026-09-08",
   "vars": {
@@ -19,9 +19,13 @@
   "observability": {
     "enabled": true,
   },
-
-  // After creating Hyperdrive, add its binding here:
-  // "hyperdrive": [
-  //   { "binding": "HYPERDRIVE", "id": "YOUR_HYPERDRIVE_ID" }
-  // ]
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "restaurant-db",
+      "database_id": "769e4f10-3720-4e23-8787-f0bfc2eecb9d",
+      "preview_database_id": "restaurant-db-local",
+      "migrations_dir": "migrations",
+    },
+  ],
 }

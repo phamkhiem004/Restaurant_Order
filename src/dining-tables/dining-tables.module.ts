@@ -2,11 +2,11 @@ import { Module } from '@nestjs/common';
 import { DiningTablesService } from './dining-tables.service';
 import { DiningTablesController } from './dining-tables.controller';
 import { DiningTable } from './entities/dining-table.entity';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { D1RepositoryModule } from '../database/d1.module';
 import { Reservation } from '../reservations/entities/reservation.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DiningTable, Reservation])],
+  imports: [D1RepositoryModule.forFeature([DiningTable, Reservation])],
   controllers: [DiningTablesController],
   providers: [DiningTablesService],
 })

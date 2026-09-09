@@ -1,8 +1,7 @@
-import { createNestApp } from './bootstrap';
-
-async function bootstrap() {
-  const app = await createNestApp();
-  await app.listen(process.env.PORT ?? 3000);
+function bootstrap(): never {
+  throw new Error(
+    'This application uses Cloudflare D1. Run it with `npm run dev:worker`.',
+  );
 }
 
-void bootstrap();
+bootstrap();

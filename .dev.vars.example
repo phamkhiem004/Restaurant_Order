@@ -1,10 +1,4 @@
-# Used by `npm run dev:worker` when no Hyperdrive binding is configured locally.
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_USERNAME=restaurant_user
-DB_PASSWORD=replace-me
-DB_NAME=restaurant_db
-
+# D1 is provided through the DB binding in wrangler.jsonc.
 VNP_TMN_CODE=replace-me
 VNP_HASH_SECRET=replace-me
 VNP_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html

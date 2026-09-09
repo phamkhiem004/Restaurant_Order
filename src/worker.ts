@@ -2,13 +2,10 @@
 
 import { httpServerHandler } from 'cloudflare:node';
 
+type NodeHttpHandler = ReturnType<typeof httpServerHandler>;
+
 interface WorkerEnv {
-  HYPERDRIVE?: Hyperdrive;
-  DB_HOST?: string;
-  DB_PORT?: string;
-  DB_USERNAME?: string;
-  DB_PASSWORD?: string;
-  DB_NAME?: string;
+  DB: D1Database;
   VNP_TMN_CODE?: string;
   VNP_HASH_SECRET?: string;
   VNP_URL?: string;
@@ -17,22 +14,7 @@ interface WorkerEnv {
 }
 
 function copyBindingToProcessEnv(env: WorkerEnv): void {
-  const hyperdrive = env.HYPERDRIVE;
-
-  if (hyperdrive) {
-    process.env.DB_HOST = hyperdrive.host;
-    process.env.DB_PORT = String(hyperdrive.port);
-    process.env.DB_USERNAME = hyperdrive.user;
-    process.env.DB_PASSWORD = hyperdrive.password;
-    process.env.DB_NAME = hyperdrive.database;
-  }
-
   const variableNames = [
-    'DB_HOST',
-    'DB_PORT',
-    'DB_USERNAME',
-    'DB_PASSWORD',
-    'DB_NAME',
     'VNP_TMN_CODE',
     'VNP_HASH_SECRET',
     'VNP_URL',
@@ -48,36 +30,43 @@ function copyBindingToProcessEnv(env: WorkerEnv): void {
   }
 }
 
+let nestHandlerPromise: Promise<NodeHttpHandler> | undefined;
+
+async function createNestHandler(env: WorkerEnv): Promise<NodeHttpHandler> {
+  copyBindingToProcessEnv(env);
+
+  const { createNestApp } = await import('./bootstrap.js');
+  const app = await createNestApp(env.DB);
+  await app.init();
+
+  const server = app.getHttpServer() as Parameters<typeof httpServerHandler>[0];
+  return httpServerHandler(server);
+}
+
+async function getNestHandler(env: WorkerEnv): Promise<NodeHttpHandler> {
+  nestHandlerPromise ??= createNestHandler(env).catch((error) => {
+    nestHandlerPromise = undefined;
+    throw error;
+  });
+  return nestHandlerPromise;
+}
+
 async function handleNestRequest(
   request: Request,
   env: WorkerEnv,
   ctx: ExecutionContext,
 ): Promise<Response> {
-  copyBindingToProcessEnv(env);
+  const handler = await getNestHandler(env);
 
-  // Loading the Nest application inside fetch keeps decorator/module setup and
-  // TypeORM initialization inside the Cloudflare request context.
-  const { createNestApp } = await import('./bootstrap.js');
-  const app = await createNestApp();
-  await app.init();
-
-  const server = app.getHttpServer() as Parameters<typeof httpServerHandler>[0];
-  const handler = httpServerHandler(server);
-
-  try {
-    if (!handler.fetch) {
-      throw new Error('Cloudflare Node HTTP handler does not expose fetch().');
-    }
-
-    return await handler.fetch(
-      request as Parameters<NonNullable<typeof handler.fetch>>[0],
-      env,
-      ctx,
-    );
-  } finally {
-    // A TypeORM/mysql2 connection cannot be reused by a later Worker request.
-    await app.close();
+  if (!handler.fetch) {
+    throw new Error('Cloudflare Node HTTP handler does not expose fetch().');
   }
+
+  return handler.fetch(
+    request as Parameters<NonNullable<typeof handler.fetch>>[0],
+    env,
+    ctx,
+  );
 }
 
 export default {
