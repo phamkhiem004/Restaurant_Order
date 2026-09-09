@@ -8,6 +8,7 @@
   --green-light: #d9ebe2;
   --orange: #ef6a3a;
   --shadow: 0 24px 70px rgba(36, 48, 43, 0.12);
+  --font-sans: 'Segoe UI', Arial, Helvetica, sans-serif;
 }
 
 * {
@@ -33,14 +34,7 @@ body {
       transparent 30rem
     ),
     var(--paper);
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  font-family: var(--font-sans);
   min-height: 100vh;
 }
 
@@ -113,11 +107,11 @@ a {
 .dashboard-hero h1 {
   margin: 10px 0 18px;
   max-width: 780px;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-sans);
   font-size: clamp(3rem, 6vw, 5.8rem);
   font-weight: 500;
   line-height: 0.96;
-  letter-spacing: -0.055em;
+  letter-spacing: -0.035em;
 }
 
 .hero-copy > p:not(.eyebrow),
@@ -336,7 +330,7 @@ input:focus {
 .panel h2,
 .menu-section h2 {
   margin: 6px 0 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-sans);
   font-size: 1.7rem;
   font-weight: 500;
 }
@@ -403,7 +397,7 @@ input:focus {
   border-radius: 22px;
   color: white;
   background: var(--orange);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 2rem;
 }
 
@@ -471,7 +465,7 @@ input:focus {
   border-radius: 13px;
   color: white;
   background: var(--green);
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 1.25rem;
 }
 
@@ -485,7 +479,7 @@ input:focus {
 
 .menu-card h3 {
   margin: 6px 0 7px;
-  font-family: Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 1.25rem;
 }
 

@@ -385,7 +385,9 @@ export default function Home() {
               {message && <p className="form-message">{message}</p>}
               <p className="hint">
                 Quyền host được kiểm tra tại backend; thay đổi dữ liệu trong
-                trình duyệt không thể nâng quyền tài khoản CUSTOMER.
+                trình duyệt không thể nâng quyền tài khoản CUSTOMER. Khóa API
+                của server chỉ cấu hình một lần; token tham gia được backend tự
+                tạo cho từng người và tự gắn vào liên kết mở phòng.
               </p>
             </article>
 

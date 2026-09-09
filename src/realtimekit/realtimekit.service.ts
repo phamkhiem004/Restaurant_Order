@@ -114,7 +114,7 @@ export class RealtimeKitService {
     const apiToken = this.configService.get<string>('REALTIMEKIT_API_TOKEN');
     if (!apiToken) {
       throw new ServiceUnavailableException(
-        'REALTIMEKIT_API_TOKEN has not been configured.',
+        'Chưa cấu hình REALTIMEKIT_API_TOKEN trên Cloudflare Worker. Đây là khóa API cố định của server và chỉ cần cấu hình một lần.',
       );
     }
 
