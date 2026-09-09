@@ -3,6 +3,13 @@
   "name": "restaurant-order",
   "main": "dist-worker/worker.js",
   "compatibility_date": "2026-09-08",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "khiempg.id.vn",
+      "custom_domain": true,
+    },
+  ],
   "vars": {
     "NODE_ENV": "production",
     "CLOUDFLARE_ACCOUNT_ID": "42b28ab2f9dba1c757ed380ca4fb5389",
