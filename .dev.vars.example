@@ -1,0 +1,11 @@
+# Used by `npm run dev:worker` when no Hyperdrive binding is configured locally.
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USERNAME=restaurant_user
+DB_PASSWORD=replace-me
+DB_NAME=restaurant_db
+
+VNP_TMN_CODE=replace-me
+VNP_HASH_SECRET=replace-me
+VNP_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+VNP_RETURN_URL=http://localhost:8787/vnpay/vnpay-return

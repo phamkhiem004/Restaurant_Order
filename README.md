@@ -59,6 +59,62 @@ $ npm run test:cov
 
 ## Deployment
 
+### Cloudflare Workers
+
+This repository includes a separate Workers entrypoint while keeping the normal
+NestJS entrypoint for local Node.js development.
+
+```bash
+# Validate the Worker bundle without uploading it
+npm run deploy:dry-run
+
+# Run the Worker locally (copies .env bindings in local mode)
+npm run dev:worker
+```
+
+Check the runtime at `http://localhost:8787/health`. The health endpoint does
+not connect to MySQL. Other endpoints initialize NestJS and a fresh TypeORM
+connection for the request, then close it so a TCP connection is never reused
+across Cloudflare request contexts.
+
+For production MySQL access, create a Hyperdrive configuration:
+
+```bash
+npx wrangler hyperdrive create restaurant-db \
+  --connection-string="mysql://USER:PASSWORD@HOST:3306/restaurant_db"
+```
+
+Copy the returned ID into `wrangler.jsonc` and enable the commented
+`hyperdrive` block. The binding name must remain `HYPERDRIVE`.
+
+Configure VNPAY secrets without committing their values:
+
+```bash
+npx wrangler secret put VNP_TMN_CODE
+npx wrangler secret put VNP_HASH_SECRET
+npx wrangler secret put VNP_RETURN_URL
+```
+
+`VNP_URL` is optional and defaults to the VNPAY sandbox URL. Use the final
+Worker URL (or custom API domain) for `VNP_RETURN_URL`, for example
+`https://api.example.com/vnpay/vnpay-return`.
+
+Deploy with:
+
+```bash
+npm run deploy
+```
+
+For a Git-connected Cloudflare build, use `npm run deploy` as the deploy
+command. Wrangler runs `npm run build:worker` from `wrangler.jsonc` itself.
+
+This NestJS adapter creates and closes the application per request to respect
+Workers' database I/O lifecycle. That is considerably heavier than a native
+Worker router and will normally require Workers Paid CPU limits for API routes.
+The lightweight `/health` route can be used to verify deployment independently.
+
+### Other Node.js hosting
+
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
 
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:

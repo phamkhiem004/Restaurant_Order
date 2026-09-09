@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "outDir": "./dist-worker",
+    "declaration": false,
+    "incremental": false,
+    "types": ["node", "@cloudflare/workers-types"]
+  },
+  "exclude": ["node_modules", "test", "dist", "dist-worker", "**/*spec.ts"]
+}
