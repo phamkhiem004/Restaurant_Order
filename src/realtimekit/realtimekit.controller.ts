@@ -40,7 +40,9 @@ export class RealtimeKitController {
     @Req() request: AuthenticatedRequest,
   ) {
     const role =
-      request.user.role === 'CUSTOMER' ? RealtimeKitRole.GUEST : dto.role;
+      request.user.role === 'CUSTOMER'
+        ? RealtimeKitRole.GUEST
+        : RealtimeKitRole.HOST;
     return this.realtimeKitService.addParticipant(meetingId, {
       ...dto,
       role,

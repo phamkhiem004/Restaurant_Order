@@ -173,7 +173,10 @@ export default function Home() {
         `/realtimekit/meetings/${encodeURIComponent(meetingId.trim())}/participants`,
         {
           method: 'POST',
-          body: JSON.stringify({ name: user.name, role: 'guest' }),
+          body: JSON.stringify({
+            name: user.name,
+            role: user.role === 'CUSTOMER' ? 'guest' : 'host',
+          }),
         },
       );
       window.location.assign(
@@ -354,7 +357,9 @@ export default function Home() {
                   />
                 </label>
                 <button className="button secondary" disabled={busy}>
-                  Tham gia phòng
+                  {user.role === 'CUSTOMER'
+                    ? 'Tham gia với quyền guest'
+                    : 'Tham gia với quyền host'}
                 </button>
               </form>
 
