@@ -95,7 +95,7 @@ export class RealtimeKitService {
   async createDemo(dto: CreateDemoMeetingDto, requestUrl: string) {
     const meeting = await this.createMeeting(dto);
     const participant = await this.addParticipant(meeting.id, dto);
-    const joinUrl = new URL('/realtimekit/demo', requestUrl);
+    const joinUrl = new URL('/meeting', requestUrl);
     joinUrl.searchParams.set('authToken', participant.token);
 
     return {

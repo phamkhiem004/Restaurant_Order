@@ -180,7 +180,7 @@ export default function Home() {
         },
       );
       window.location.assign(
-        `/realtimekit/demo?authToken=${encodeURIComponent(participant.token)}`,
+        `/meeting?authToken=${encodeURIComponent(participant.token)}`,
       );
     } catch (error) {
       setMessage(
