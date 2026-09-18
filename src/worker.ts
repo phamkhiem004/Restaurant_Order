@@ -95,6 +95,23 @@ export default {
       return Response.json({ status: 'ok', runtime: 'cloudflare-workers' });
     }
 
+    // Public, secret-free helper for monitoring workflows. RedAI's schedule
+    // trigger does not expose its execution timestamp, so the workflow uses
+    // this endpoint to build an exact rolling analytics window.
+    if (url.pathname === '/monitoring/window' && request.method === 'GET') {
+      const end = new Date();
+      const start = new Date(end.getTime() - 3 * 60 * 1000);
+
+      return Response.json(
+        {
+          start: start.toISOString(),
+          end: end.toISOString(),
+          intervalSeconds: 180,
+        },
+        { headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+
     if (request.method === 'GET' || request.method === 'HEAD') {
       const assetResponse = await env.ASSETS.fetch(request);
       if (assetResponse.status !== 404) return assetResponse;
