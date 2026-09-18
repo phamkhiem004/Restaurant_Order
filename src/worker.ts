@@ -102,12 +102,56 @@ export default {
       const end = new Date();
       const start = new Date(end.getTime() - 3 * 60 * 1000);
 
+      const query = `query {
+        viewer {
+          zones(filter: { zoneTag: "3d3d6f1f464895ebf6cd6764284e9825" }) {
+            total: httpRequestsAdaptiveGroups(
+              limit: 1
+              filter: { datetime_geq: "${start.toISOString()}", datetime_leq: "${end.toISOString()}" }
+            ) { count }
+            errors500: httpRequestsAdaptiveGroups(
+              limit: 1
+              filter: {
+                datetime_geq: "${start.toISOString()}"
+                datetime_leq: "${end.toISOString()}"
+                edgeResponseStatus: 500
+              }
+            ) { count }
+          }
+        }
+      }`;
+
       return Response.json(
         {
           start: start.toISOString(),
           end: end.toISOString(),
           intervalSeconds: 180,
+          query,
         },
+        { headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+
+    if (
+      url.pathname === '/monitoring/error-rate' &&
+      request.method === 'POST'
+    ) {
+      const payload = (await request.json()) as {
+        total?: unknown;
+        error500?: unknown;
+      };
+      const total = Number(payload.total);
+      const error500 = Number(payload.error500);
+
+      if (!Number.isFinite(total) || !Number.isFinite(error500) || total <= 0) {
+        return Response.json(
+          { error: 'total and error500 must be finite numbers; total must be > 0' },
+          { status: 400 },
+        );
+      }
+
+      return Response.json(
+        { result: (error500 / total) * 100, total, error500 },
         { headers: { 'Cache-Control': 'no-store' } },
       );
     }
