@@ -12,6 +12,7 @@ interface WorkerEnv {
   VNP_URL?: string;
   VNP_RETURN_URL?: string;
   CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_API_TOKEN?: string;
   REALTIMEKIT_APP_ID?: string;
   REALTIMEKIT_API_TOKEN?: string;
   REALTIMEKIT_DEMO_KEY?: string;
@@ -22,6 +23,104 @@ interface WorkerEnv {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
   NODE_ENV?: string;
+}
+
+const MONITORED_ZONE_ID = '3d3d6f1f464895ebf6cd6764284e9825';
+const MONITORED_DOMAIN = 'khiempg.id.vn';
+const ERROR_RATE_THRESHOLD = 3;
+
+async function sendTelegramMessage(
+  env: WorkerEnv,
+  message: string,
+): Promise<unknown> {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
+    throw new Error('Telegram Worker secrets have not been configured.');
+  }
+
+  const response = await fetch(
+    `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        chat_id: env.TELEGRAM_CHAT_ID,
+        text: message,
+        disable_web_page_preview: true,
+      }),
+    },
+  );
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(`Telegram API returned ${response.status}.`);
+  }
+  return result;
+}
+
+async function runErrorSpikeCheck(env: WorkerEnv): Promise<void> {
+  if (!env.CLOUDFLARE_API_TOKEN) {
+    throw new Error('CLOUDFLARE_API_TOKEN has not been configured.');
+  }
+
+  const end = new Date();
+  const start = new Date(end.getTime() - 3 * 60 * 1000);
+  const query = `query {
+    viewer {
+      zones(filter: { zoneTag: "${MONITORED_ZONE_ID}" }) {
+        total: httpRequestsAdaptiveGroups(
+          limit: 1
+          filter: { datetime_geq: "${start.toISOString()}", datetime_leq: "${end.toISOString()}" }
+        ) { count }
+        errors500: httpRequestsAdaptiveGroups(
+          limit: 1
+          filter: {
+            datetime_geq: "${start.toISOString()}"
+            datetime_leq: "${end.toISOString()}"
+            edgeResponseStatus: 500
+          }
+        ) { count }
+      }
+    }
+  }`;
+
+  const response = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query }),
+  });
+  const result = (await response.json()) as {
+    data?: {
+      viewer?: {
+        zones?: Array<{
+          total?: Array<{ count?: number }>;
+          errors500?: Array<{ count?: number }>;
+        }>;
+      };
+    };
+    errors?: unknown;
+  };
+  if (!response.ok || result.errors) {
+    throw new Error(`Cloudflare Analytics request failed (${response.status}).`);
+  }
+
+  const zone = result.data?.viewer?.zones?.[0];
+  const total = Number(zone?.total?.[0]?.count ?? 0);
+  const error500 = Number(zone?.errors500?.[0]?.count ?? 0);
+  const errorRate = total > 0 ? (error500 / total) * 100 : 0;
+  if (errorRate <= ERROR_RATE_THRESHOLD) return;
+
+  const message =
+    `\u26a0\ufe0f Error rate t\u0103ng\n\n` +
+    `Domain: ${MONITORED_DOMAIN}\n` +
+    `HTTP 500: ${errorRate.toFixed(2)}% (${error500}/${total})\n` +
+    `Started: ${start.toISOString()}\n\n` +
+    `[Xem Analytics] https://dash.cloudflare.com/42b28ab2f9dba1c757ed380ca4fb5389/${MONITORED_DOMAIN}/analytics/traffic\n` +
+    `[Xem Worker Logs] https://dash.cloudflare.com/42b28ab2f9dba1c757ed380ca4fb5389/workers/services/view/restaurant-order/production/observability/logs\n` +
+    `[Ki\u1ec3m tra Origin] https://${MONITORED_DOMAIN}/`;
+
+  await sendTelegramMessage(env, message);
 }
 
 function copyBindingToProcessEnv(env: WorkerEnv): void {
@@ -224,21 +323,14 @@ export default {
         );
       }
 
-      const telegramResponse = await fetch(
-        `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: env.TELEGRAM_CHAT_ID,
-            text: message,
-            disable_web_page_preview: true,
-          }),
-        },
-      );
-      const telegramResult = await telegramResponse.json();
-
-      return Response.json(telegramResult, { status: telegramResponse.status });
+      try {
+        return Response.json(await sendTelegramMessage(env, message));
+      } catch (error) {
+        return Response.json(
+          { error: error instanceof Error ? error.message : 'Telegram failed.' },
+          { status: 502 },
+        );
+      }
     }
 
     if (request.method === 'GET' || request.method === 'HEAD') {
@@ -247,5 +339,9 @@ export default {
     }
 
     return handleNestRequest(request, env, ctx);
+  },
+
+  async scheduled(_controller, env, ctx): Promise<void> {
+    ctx.waitUntil(runErrorSpikeCheck(env));
   },
 } satisfies ExportedHandler<WorkerEnv>;
