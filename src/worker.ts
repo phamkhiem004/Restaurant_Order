@@ -19,6 +19,8 @@ interface WorkerEnv {
   REALTIMEKIT_HOST_PRESET?: string;
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_CHAT_ID?: string;
   NODE_ENV?: string;
 }
 
@@ -198,6 +200,45 @@ export default {
         },
         { headers: { 'Cache-Control': 'no-store' } },
       );
+    }
+
+    // Send the prepared alert while keeping the Telegram credential out of
+    // source control and out of the workflow graph.
+    if (url.pathname === '/monitoring/telegram' && request.method === 'POST') {
+      if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
+        return Response.json(
+          { error: 'Telegram Worker secrets have not been configured.' },
+          { status: 503 },
+        );
+      }
+
+      const payload = (await request.json()) as {
+        body?: { text?: unknown };
+        text?: unknown;
+      };
+      const message = String(payload.body?.text ?? payload.text ?? '').trim();
+      if (!message) {
+        return Response.json(
+          { error: 'A non-empty Telegram message is required.' },
+          { status: 400 },
+        );
+      }
+
+      const telegramResponse = await fetch(
+        `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: env.TELEGRAM_CHAT_ID,
+            text: message,
+            disable_web_page_preview: true,
+          }),
+        },
+      );
+      const telegramResult = await telegramResponse.json();
+
+      return Response.json(telegramResult, { status: telegramResponse.status });
     }
 
     if (request.method === 'GET' || request.method === 'HEAD') {
