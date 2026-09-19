@@ -122,12 +122,7 @@ export default {
       }`;
 
       return Response.json(
-        {
-          start: start.toISOString(),
-          end: end.toISOString(),
-          intervalSeconds: 180,
-          query,
-        },
+        { query },
         { headers: { 'Cache-Control': 'no-store' } },
       );
     }
@@ -152,6 +147,55 @@ export default {
 
       return Response.json(
         { result: (error500 / total) * 100, total, error500 },
+        { headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+
+    // Receives the complete HTTP-node response from Cloudflare GraphQL.
+    // A non-alert is deliberately returned on a non-2xx port so the workflow
+    // can gate the Telegram node without a separate Condition node.
+    if (url.pathname === '/monitoring/evaluate' && request.method === 'POST') {
+      const payload = (await request.json()) as {
+        body?: {
+          data?: {
+            viewer?: {
+              zones?: Array<{
+                total?: Array<{ count?: unknown }>;
+                errors500?: Array<{ count?: unknown }>;
+              }>;
+            };
+          };
+        };
+      };
+      const zone = payload.body?.data?.viewer?.zones?.[0];
+      const total = Number(zone?.total?.[0]?.count ?? 0);
+      const error500 = Number(zone?.errors500?.[0]?.count ?? 0);
+      const errorRate = total > 0 ? (error500 / total) * 100 : 0;
+
+      if (errorRate <= 3) {
+        return Response.json(
+          { alert: false, errorRate, total, error500, threshold: 3 },
+          { status: 409, headers: { 'Cache-Control': 'no-store' } },
+        );
+      }
+
+      const started = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+      return Response.json(
+        {
+          alert: true,
+          errorRate,
+          total,
+          error500,
+          threshold: 3,
+          text:
+            `⚠️ Error rate tăng\n\n` +
+            `Domain: khiempg.id.vn\n` +
+            `HTTP 500: ${errorRate.toFixed(2)}% (${error500}/${total})\n` +
+            `Started: ${started}\n\n` +
+            `[Xem Analytics] https://dash.cloudflare.com/42b28ab2f9dba1c757ed380ca4fb5389/khiempg.id.vn/analytics/traffic\n` +
+            `[Xem Worker Logs] https://dash.cloudflare.com/42b28ab2f9dba1c757ed380ca4fb5389/workers/services/view/restaurant-order/production/observability/logs\n` +
+            `[Kiểm tra Origin] https://khiempg.id.vn/`,
+        },
         { headers: { 'Cache-Control': 'no-store' } },
       );
     }
