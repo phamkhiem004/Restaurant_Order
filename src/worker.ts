@@ -28,23 +28,36 @@ interface WorkerEnv {
 const MONITORED_ZONE_ID = '3d3d6f1f464895ebf6cd6764284e9825';
 const MONITORED_DOMAIN = 'khiempg.id.vn';
 const ERROR_RATE_THRESHOLD = 3;
+const TRAFFIC_SPIKE_THRESHOLD = 900;
+
+interface TrafficSpikeAlert {
+  text: string;
+  chartUrl: string;
+  increasePercent: number;
+  currentRequestsPerMinute: number;
+  previousRequestsPerMinute: number;
+}
 
 async function sendTelegramMessage(
   env: WorkerEnv,
   message: string,
+  chartUrl?: string,
 ): Promise<unknown> {
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
     throw new Error('Telegram Worker secrets have not been configured.');
   }
 
+  const method = chartUrl ? 'sendPhoto' : 'sendMessage';
   const response = await fetch(
-    `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+    `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
       body: JSON.stringify({
         chat_id: env.TELEGRAM_CHAT_ID,
-        text: message,
+        ...(chartUrl
+          ? { photo: chartUrl, caption: message }
+          : { text: message }),
         disable_web_page_preview: true,
       }),
     },
@@ -54,6 +67,123 @@ async function sendTelegramMessage(
     throw new Error(`Telegram API returned ${response.status}.`);
   }
   return result;
+}
+
+async function createTrafficSpikeAlert(
+  env: WorkerEnv,
+): Promise<TrafficSpikeAlert | null> {
+  if (!env.CLOUDFLARE_API_TOKEN) {
+    throw new Error('CLOUDFLARE_API_TOKEN has not been configured.');
+  }
+
+  const end = new Date();
+  const currentStart = new Date(end.getTime() - 5 * 60 * 1000);
+  const previousStart = new Date(end.getTime() - 10 * 60 * 1000);
+  const query = `query {
+    viewer {
+      zones(filter: { zoneTag: "${MONITORED_ZONE_ID}" }) {
+        current: httpRequestsAdaptiveGroups(limit: 1, filter: {
+          datetime_geq: "${currentStart.toISOString()}"
+          datetime_lt: "${end.toISOString()}"
+          requestSource: "eyeball"
+        }) { count sum { visits edgeResponseBytes } }
+        previous: httpRequestsAdaptiveGroups(limit: 1, filter: {
+          datetime_geq: "${previousStart.toISOString()}"
+          datetime_lt: "${currentStart.toISOString()}"
+          requestSource: "eyeball"
+        }) { count }
+        series: httpRequestsAdaptiveGroups(limit: 10, orderBy: [datetimeMinute_ASC], filter: {
+          datetime_geq: "${previousStart.toISOString()}"
+          datetime_lt: "${end.toISOString()}"
+          requestSource: "eyeball"
+        }) { count dimensions { datetimeMinute } }
+        topHostnames: httpRequestsAdaptiveGroups(limit: 5, orderBy: [count_DESC], filter: {
+          datetime_geq: "${currentStart.toISOString()}"
+          datetime_lt: "${end.toISOString()}"
+          requestSource: "eyeball"
+        }) { count dimensions { clientRequestHTTPHost } }
+        topPaths: httpRequestsAdaptiveGroups(limit: 5, orderBy: [count_DESC], filter: {
+          datetime_geq: "${currentStart.toISOString()}"
+          datetime_lt: "${end.toISOString()}"
+          requestSource: "eyeball"
+        }) { count dimensions { clientRequestPath } }
+        topCountries: httpRequestsAdaptiveGroups(limit: 5, orderBy: [count_DESC], filter: {
+          datetime_geq: "${currentStart.toISOString()}"
+          datetime_lt: "${end.toISOString()}"
+          requestSource: "eyeball"
+        }) { count dimensions { clientCountryName } }
+      }
+    }
+  }`;
+
+  const response = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query }),
+  });
+  const result = (await response.json()) as {
+    data?: { viewer?: { zones?: Array<Record<string, unknown>> } };
+    errors?: unknown;
+  };
+  if (!response.ok || result.errors) {
+    throw new Error(
+      `Cloudflare traffic Analytics failed (${response.status}): ${JSON.stringify(result.errors ?? null)}`,
+    );
+  }
+
+  const zone = result.data?.viewer?.zones?.[0] as
+    | {
+        current?: Array<{ count?: number; sum?: { visits?: number; edgeResponseBytes?: number } }>;
+        previous?: Array<{ count?: number }>;
+        series?: Array<{ count?: number; dimensions?: { datetimeMinute?: string } }>;
+        topHostnames?: Array<{ count?: number; dimensions?: { clientRequestHTTPHost?: string } }>;
+        topPaths?: Array<{ count?: number; dimensions?: { clientRequestPath?: string } }>;
+        topCountries?: Array<{ count?: number; dimensions?: { clientCountryName?: string } }>;
+      }
+    | undefined;
+  const currentRequests = Number(zone?.current?.[0]?.count ?? 0);
+  const previousRequests = Number(zone?.previous?.[0]?.count ?? 0);
+  const currentRequestsPerMinute = currentRequests / 5;
+  const previousRequestsPerMinute = previousRequests / 5;
+  const increasePercent =
+    previousRequests > 0
+      ? ((currentRequests - previousRequests) / previousRequests) * 100
+      : 0;
+  if (increasePercent < TRAFFIC_SPIKE_THRESHOLD) return null;
+
+  const formatTop = (
+    rows: Array<{ count?: number; dimensions?: Record<string, string | undefined> }> | undefined,
+    key: string,
+  ) =>
+    (rows ?? [])
+      .map((row) => `${row.dimensions?.[key] ?? 'unknown'} (${row.count ?? 0})`)
+      .join(', ') || 'Không có dữ liệu';
+  const series = zone?.series ?? [];
+  const labels = series.map((row) => row.dimensions?.datetimeMinute?.slice(11, 16) ?? '');
+  const values = series.map((row) => Number(row.count ?? 0));
+  const chartUrl = `https://quickchart.io/chart?width=900&height=420&c=${encodeURIComponent(
+    JSON.stringify({
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Requests/phút', data: values, borderColor: '#f97316', fill: false }] },
+      options: { title: { display: true, text: `Traffic ${MONITORED_DOMAIN} · 10 phút` } },
+    }),
+  )}`;
+  const visits = Number(zone?.current?.[0]?.sum?.visits ?? 0);
+  const bytes = Number(zone?.current?.[0]?.sum?.edgeResponseBytes ?? 0);
+  const text =
+    `\ud83d\udea8 Traffic tăng ${increasePercent.toFixed(0)}% trong 5 phút\n\n` +
+    `Domain: ${MONITORED_DOMAIN}\n` +
+    `Hiện tại: ${currentRequestsPerMinute.toFixed(0)} req/min\n` +
+    `Trước đó: ${previousRequestsPerMinute.toFixed(0)} req/min\n` +
+    `Visits: ${visits} · Data: ${(bytes / 1024 / 1024).toFixed(2)} MiB\n\n` +
+    `Top hostname: ${formatTop(zone?.topHostnames, 'clientRequestHTTPHost')}\n` +
+    `Top path: ${formatTop(zone?.topPaths, 'clientRequestPath')}\n` +
+    `Top country: ${formatTop(zone?.topCountries, 'clientCountryName')}`;
+
+  return { text, chartUrl, increasePercent, currentRequestsPerMinute, previousRequestsPerMinute };
 }
 
 async function runErrorSpikeCheck(env: WorkerEnv): Promise<void> {
@@ -312,10 +442,14 @@ export default {
       }
 
       const payload = (await request.json()) as {
-        body?: { text?: unknown };
+        body?: { text?: unknown; chartUrl?: unknown };
         text?: unknown;
+        chartUrl?: unknown;
       };
       const message = String(payload.body?.text ?? payload.text ?? '').trim();
+      const chartUrl = String(
+        payload.body?.chartUrl ?? payload.chartUrl ?? '',
+      ).trim();
       if (!message) {
         return Response.json(
           { error: 'A non-empty Telegram message is required.' },
@@ -324,10 +458,36 @@ export default {
       }
 
       try {
-        return Response.json(await sendTelegramMessage(env, message));
+        return Response.json(
+          await sendTelegramMessage(env, message, chartUrl || undefined),
+        );
       } catch (error) {
         return Response.json(
           { error: error instanceof Error ? error.message : 'Telegram failed.' },
+          { status: 502 },
+        );
+      }
+    }
+
+    if (
+      url.pathname === '/monitoring/traffic-spike' &&
+      request.method === 'POST'
+    ) {
+      try {
+        const alert = await createTrafficSpikeAlert(env);
+        if (!alert) {
+          return Response.json(
+            { alert: false, threshold: TRAFFIC_SPIKE_THRESHOLD },
+            { status: 409, headers: { 'Cache-Control': 'no-store' } },
+          );
+        }
+        return Response.json(
+          { alert: true, threshold: TRAFFIC_SPIKE_THRESHOLD, ...alert },
+          { headers: { 'Cache-Control': 'no-store' } },
+        );
+      } catch (error) {
+        return Response.json(
+          { error: error instanceof Error ? error.message : 'Traffic check failed.' },
           { status: 502 },
         );
       }
@@ -341,7 +501,17 @@ export default {
     return handleNestRequest(request, env, ctx);
   },
 
-  async scheduled(_controller, env, ctx): Promise<void> {
+  async scheduled(controller, env, ctx): Promise<void> {
+    if (controller.cron === '*/5 * * * *') {
+      ctx.waitUntil(
+        createTrafficSpikeAlert(env).then(async (alert) => {
+          if (alert) {
+            await sendTelegramMessage(env, alert.text, alert.chartUrl);
+          }
+        }),
+      );
+      return;
+    }
     ctx.waitUntil(runErrorSpikeCheck(env));
   },
 } satisfies ExportedHandler<WorkerEnv>;
