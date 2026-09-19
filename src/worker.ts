@@ -38,6 +38,70 @@ interface TrafficSpikeAlert {
   previousRequestsPerMinute: number;
 }
 
+function buildTrafficSpikeQuery(): string {
+  const end = new Date();
+  const currentStart = new Date(end.getTime() - 5 * 60 * 1000);
+  const previousStart = new Date(end.getTime() - 10 * 60 * 1000);
+  return `query {
+    viewer {
+      zones(filter: { zoneTag: "${MONITORED_ZONE_ID}" }) {
+        current: httpRequestsAdaptiveGroups(limit: 1, filter: { datetime_geq: "${currentStart.toISOString()}", datetime_lt: "${end.toISOString()}", requestSource: "eyeball" }) { count sum { visits edgeResponseBytes } }
+        previous: httpRequestsAdaptiveGroups(limit: 1, filter: { datetime_geq: "${previousStart.toISOString()}", datetime_lt: "${currentStart.toISOString()}", requestSource: "eyeball" }) { count }
+        series: httpRequestsAdaptiveGroups(limit: 10, orderBy: [datetimeMinute_ASC], filter: { datetime_geq: "${previousStart.toISOString()}", datetime_lt: "${end.toISOString()}", requestSource: "eyeball" }) { count dimensions { datetimeMinute } }
+        topHostnames: httpRequestsAdaptiveGroups(limit: 5, orderBy: [count_DESC], filter: { datetime_geq: "${currentStart.toISOString()}", datetime_lt: "${end.toISOString()}", requestSource: "eyeball" }) { count dimensions { clientRequestHTTPHost } }
+        topPaths: httpRequestsAdaptiveGroups(limit: 5, orderBy: [count_DESC], filter: { datetime_geq: "${currentStart.toISOString()}", datetime_lt: "${end.toISOString()}", requestSource: "eyeball" }) { count dimensions { clientRequestPath } }
+        topCountries: httpRequestsAdaptiveGroups(limit: 5, orderBy: [count_DESC], filter: { datetime_geq: "${currentStart.toISOString()}", datetime_lt: "${end.toISOString()}", requestSource: "eyeball" }) { count dimensions { clientCountryName } }
+      }
+    }
+  }`;
+}
+
+function evaluateTrafficSpikeResult(payload: {
+  body?: { data?: { viewer?: { zones?: Array<Record<string, unknown>> } } };
+}): TrafficSpikeAlert | null {
+  const zone = payload.body?.data?.viewer?.zones?.[0] as
+    | {
+        current?: Array<{ count?: number; sum?: { visits?: number; edgeResponseBytes?: number } }>;
+        previous?: Array<{ count?: number }>;
+        series?: Array<{ count?: number; dimensions?: { datetimeMinute?: string } }>;
+        topHostnames?: Array<{ count?: number; dimensions?: { clientRequestHTTPHost?: string } }>;
+        topPaths?: Array<{ count?: number; dimensions?: { clientRequestPath?: string } }>;
+        topCountries?: Array<{ count?: number; dimensions?: { clientCountryName?: string } }>;
+      }
+    | undefined;
+  const currentRequests = Number(zone?.current?.[0]?.count ?? 0);
+  const previousRequests = Number(zone?.previous?.[0]?.count ?? 0);
+  const currentRequestsPerMinute = currentRequests / 5;
+  const previousRequestsPerMinute = previousRequests / 5;
+  const increasePercent = previousRequests > 0
+    ? ((currentRequests - previousRequests) / previousRequests) * 100
+    : 0;
+  if (increasePercent < TRAFFIC_SPIKE_THRESHOLD) return null;
+
+  const top = (rows: unknown[] | undefined, key: string) =>
+    (rows ?? []).map((item) => {
+      const row = item as { count?: number; dimensions?: Record<string, string> };
+      return `${row.dimensions?.[key] ?? 'unknown'} (${row.count ?? 0})`;
+    }).join(', ') || 'Không có dữ liệu';
+  const series = zone?.series ?? [];
+  const labels = series.map((row) => row.dimensions?.datetimeMinute?.slice(11, 16) ?? '');
+  const values = series.map((row) => Number(row.count ?? 0));
+  const chartUrl = `https://quickchart.io/chart?width=900&height=420&c=${encodeURIComponent(JSON.stringify({
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Requests/phút', data: values, borderColor: '#f97316', fill: false }] },
+  }))}`;
+  const text =
+    `\ud83d\udea8 Traffic tăng ${increasePercent.toFixed(0)}% trong 5 phút\n\n` +
+    `Domain: ${MONITORED_DOMAIN}\n` +
+    `Hiện tại: ${currentRequestsPerMinute.toFixed(0)} req/min\n` +
+    `Trước đó: ${previousRequestsPerMinute.toFixed(0)} req/min\n` +
+    `Visits: ${Number(zone?.current?.[0]?.sum?.visits ?? 0)} · Data: ${(Number(zone?.current?.[0]?.sum?.edgeResponseBytes ?? 0) / 1024 / 1024).toFixed(2)} MiB\n\n` +
+    `Top hostname: ${top(zone?.topHostnames, 'clientRequestHTTPHost')}\n` +
+    `Top path: ${top(zone?.topPaths, 'clientRequestPath')}\n` +
+    `Top country: ${top(zone?.topCountries, 'clientCountryName')}`;
+  return { text, chartUrl, increasePercent, currentRequestsPerMinute, previousRequestsPerMinute };
+}
+
 async function sendTelegramMessage(
   env: WorkerEnv,
   message: string,
@@ -467,6 +531,35 @@ export default {
           { status: 502 },
         );
       }
+    }
+
+    if (
+      url.pathname === '/monitoring/traffic-window' &&
+      request.method === 'GET'
+    ) {
+      return Response.json(
+        { query: buildTrafficSpikeQuery() },
+        { headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+
+    if (
+      url.pathname === '/monitoring/traffic-evaluate' &&
+      request.method === 'POST'
+    ) {
+      const alert = evaluateTrafficSpikeResult(
+        (await request.json()) as Parameters<typeof evaluateTrafficSpikeResult>[0],
+      );
+      if (!alert) {
+        return Response.json(
+          { alert: false, threshold: TRAFFIC_SPIKE_THRESHOLD },
+          { status: 409, headers: { 'Cache-Control': 'no-store' } },
+        );
+      }
+      return Response.json(
+        { alert: true, threshold: TRAFFIC_SPIKE_THRESHOLD, ...alert },
+        { headers: { 'Cache-Control': 'no-store' } },
+      );
     }
 
     if (
