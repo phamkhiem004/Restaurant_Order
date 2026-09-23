@@ -18,6 +18,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/menu', label: 'Thực đơn' },
   { href: '/tables', label: 'Bàn ăn' },
   { href: '/bookings', label: 'Đặt bàn' },
+  { href: '/classes', label: 'Lớp học' },
   { href: '/orders', label: 'Đơn hàng', roles: ['STAFF', 'ADMIN'] },
   { href: '/payments', label: 'Thanh toán', roles: ['STAFF', 'ADMIN'] },
   { href: '/accounts', label: 'Người dùng', roles: ['ADMIN'] },
