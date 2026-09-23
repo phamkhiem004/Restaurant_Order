@@ -13,6 +13,7 @@ import {
 } from '../../../lib/labels';
 import { useSession } from '../../../lib/session';
 import type { ClassEnrollment, ClassSchedule, User } from '../../../lib/types';
+import { usePolling } from '../../../lib/use-polling';
 
 export default function ClassesPage() {
   const { user, loading: checkingSession } = useSession();
@@ -28,8 +29,8 @@ export default function ClassesPage() {
 
   const isStaff = user?.role === 'STAFF' || user?.role === 'ADMIN';
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const [scheduleList, enrollmentList] = await Promise.all([
         classSchedulesApi.list(),
@@ -37,19 +38,24 @@ export default function ClassesPage() {
       ]);
       setSchedules(scheduleList);
       setMyEnrollments(enrollmentList);
-      setError('');
+      if (!opts?.silent) setError('');
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Không thể tải lịch dạy nấu ăn.',
-      );
+      if (!opts?.silent) {
+        setError(
+          err instanceof Error ? err.message : 'Không thể tải lịch dạy nấu ăn.',
+        );
+      }
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
     if (!checkingSession) load();
   }, [checkingSession, load]);
+  usePolling(() => {
+    if (!checkingSession) load({ silent: true });
+  }, 15000);
 
   useEffect(() => {
     if (!isStaff) return;
@@ -207,7 +213,7 @@ export default function ClassesPage() {
           <p className="eyebrow">LỚP HỌC TRỰC TUYẾN</p>
           <h1>Dạy nấu ăn online</h1>
         </div>
-        <button className="button ghost small" onClick={load} disabled={loading}>
+        <button className="button ghost small" onClick={() => load()} disabled={loading}>
           Làm mới
         </button>
       </div>

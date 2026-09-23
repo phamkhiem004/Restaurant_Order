@@ -8,6 +8,7 @@ import { formatDateTime, formatPrice } from '../../../lib/format';
 import { orderStatusLabel, orderStatusTone } from '../../../lib/labels';
 import { useSession } from '../../../lib/session';
 import type { DiningTable, Order } from '../../../lib/types';
+import { usePolling } from '../../../lib/use-polling';
 
 export default function PaymentsPage() {
   const { user, loading: checkingSession } = useSession();
@@ -21,8 +22,8 @@ export default function PaymentsPage() {
 
   const isStaff = user?.role === 'STAFF' || user?.role === 'ADMIN';
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const [orderList, tableList] = await Promise.all([
         ordersApi.listOrders(),
@@ -30,17 +31,22 @@ export default function PaymentsPage() {
       ]);
       setOrders(orderList);
       setTables(tableList);
-      setError('');
+      if (!opts?.silent) setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải danh sách đơn hàng.');
+      if (!opts?.silent) {
+        setError(err instanceof Error ? err.message : 'Không thể tải danh sách đơn hàng.');
+      }
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (isStaff) load();
   }, [isStaff, load]);
+  usePolling(() => {
+    if (isStaff) load({ silent: true });
+  }, 15000);
 
   const tableNameById = useMemo(() => {
     const map = new Map<number, string>();
@@ -95,7 +101,7 @@ export default function PaymentsPage() {
           <p className="eyebrow">THANH TOÁN</p>
           <h1>Chốt hóa đơn &amp; thanh toán VNPay</h1>
         </div>
-        <button className="button ghost small" onClick={load} disabled={loading}>
+        <button className="button ghost small" onClick={() => load()} disabled={loading}>
           Làm mới
         </button>
       </div>

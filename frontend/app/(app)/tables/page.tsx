@@ -6,6 +6,7 @@ import { formatDateTime } from '../../../lib/format';
 import { tableStatusLabel } from '../../../lib/labels';
 import { useSession } from '../../../lib/session';
 import type { TableMapEntry } from '../../../lib/types';
+import { usePolling } from '../../../lib/use-polling';
 
 export default function TablesPage() {
   const { user } = useSession();
@@ -17,21 +18,25 @@ export default function TablesPage() {
 
   const canManage = user?.role === 'STAFF' || user?.role === 'ADMIN';
 
-  const loadTables = useCallback(async () => {
-    setLoading(true);
+  const loadTables = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
-      setTables(await diningTablesApi.map());
-      setError('');
+      const result = await diningTablesApi.map();
+      setTables(result);
+      if (!opts?.silent) setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải sơ đồ bàn.');
+      if (!opts?.silent) {
+        setError(err instanceof Error ? err.message : 'Không thể tải sơ đồ bàn.');
+      }
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadTables();
   }, [loadTables]);
+  usePolling(() => loadTables({ silent: true }), 15000);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,7 +81,7 @@ export default function TablesPage() {
           <p className="eyebrow">SƠ ĐỒ BÀN ĂN</p>
           <h1>Tình trạng bàn theo thời gian thực</h1>
         </div>
-        <button className="button ghost small" onClick={loadTables} disabled={loading}>
+        <button className="button ghost small" onClick={() => loadTables()} disabled={loading}>
           Làm mới
         </button>
       </div>

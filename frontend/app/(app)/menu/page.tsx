@@ -7,6 +7,7 @@ import { categoryIcon, findDishPhoto } from '../../../lib/dish-photos';
 import { formatPrice } from '../../../lib/format';
 import { useSession } from '../../../lib/session';
 import type { MenuItem } from '../../../lib/types';
+import { usePolling } from '../../../lib/use-polling';
 
 interface EditState {
   name: string;
@@ -42,21 +43,25 @@ export default function MenuPage() {
 
   const canManage = user?.role === 'STAFF' || user?.role === 'ADMIN';
 
-  const loadMenu = useCallback(async () => {
-    setLoading(true);
+  const loadMenu = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
-      setMenu(await menuItemsApi.list());
-      setError('');
+      const result = await menuItemsApi.list();
+      setMenu(result);
+      if (!opts?.silent) setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải thực đơn.');
+      if (!opts?.silent) {
+        setError(err instanceof Error ? err.message : 'Không thể tải thực đơn.');
+      }
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadMenu();
   }, [loadMenu]);
+  usePolling(() => loadMenu({ silent: true }), 15000);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -138,7 +143,7 @@ export default function MenuPage() {
           <p className="eyebrow">THỰC ĐƠN</p>
           <h1>Món ăn của nhà hàng</h1>
         </div>
-        <button className="button ghost small" onClick={loadMenu} disabled={loading}>
+        <button className="button ghost small" onClick={() => loadMenu()} disabled={loading}>
           Làm mới
         </button>
       </div>

@@ -49,6 +49,9 @@ lerna-debug.log*
 .dev.vars.*
 !.dev.vars.example
 
+# Claude Code local (personal, machine-specific) settings
+/.claude/settings.local.json
+
 # temp directory
 .temp
 .tmp

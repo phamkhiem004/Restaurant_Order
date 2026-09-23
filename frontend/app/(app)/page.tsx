@@ -8,6 +8,7 @@ import { DISH_PHOTOS } from '../../lib/dish-photos';
 import { formatPrice } from '../../lib/format';
 import { useSession } from '../../lib/session';
 import type { MenuItem } from '../../lib/types';
+import { usePolling } from '../../lib/use-polling';
 
 function effectivePrice(item: MenuItem) {
   return item.is_flash_sale && item.sale_price ? item.sale_price : item.price;
@@ -27,6 +28,7 @@ export default function Home() {
   useEffect(() => {
     loadMenu();
   }, [loadMenu]);
+  usePolling(loadMenu, 15000);
 
   async function handleAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

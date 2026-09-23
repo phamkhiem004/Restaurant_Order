@@ -17,6 +17,7 @@ import type {
   ReservationStatus,
   User,
 } from '../../../lib/types';
+import { usePolling } from '../../../lib/use-polling';
 
 const STATUS_TABS: ('all' | ReservationStatus)[] = [
   'all',
@@ -40,8 +41,8 @@ export default function ReservationsPage() {
 
   const isStaff = user?.role === 'STAFF' || user?.role === 'ADMIN';
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const [reservationList, availableList, tableList] = await Promise.all([
         reservationsApi.list(),
@@ -51,19 +52,22 @@ export default function ReservationsPage() {
       setReservations(reservationList);
       setAvailableTables(availableList);
       setAllTables(tableList);
-      setError('');
+      if (!opts?.silent) setError('');
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Không thể tải danh sách đặt bàn.',
-      );
+      if (!opts?.silent) {
+        setError(
+          err instanceof Error ? err.message : 'Không thể tải danh sách đặt bàn.',
+        );
+      }
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
+  usePolling(() => load({ silent: true }), 15000);
 
   useEffect(() => {
     if (!isStaff) return;
@@ -150,7 +154,7 @@ export default function ReservationsPage() {
           <p className="eyebrow">ĐẶT BÀN</p>
           <h1>{isStaff ? 'Quản lý đặt bàn' : 'Đặt bàn của bạn'}</h1>
         </div>
-        <button className="button ghost small" onClick={load} disabled={loading}>
+        <button className="button ghost small" onClick={() => load()} disabled={loading}>
           Làm mới
         </button>
       </div>

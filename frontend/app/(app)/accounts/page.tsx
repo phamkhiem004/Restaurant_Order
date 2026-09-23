@@ -7,6 +7,7 @@ import { formatDateTime } from '../../../lib/format';
 import { roleLabel } from '../../../lib/labels';
 import { useSession } from '../../../lib/session';
 import type { User } from '../../../lib/types';
+import { usePolling } from '../../../lib/use-polling';
 
 interface EditState {
   name: string;
@@ -27,21 +28,27 @@ export default function UsersPage() {
 
   const isAdmin = user?.role === 'ADMIN';
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
-      setUsers(await usersApi.list());
-      setError('');
+      const result = await usersApi.list();
+      setUsers(result);
+      if (!opts?.silent) setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải danh sách người dùng.');
+      if (!opts?.silent) {
+        setError(err instanceof Error ? err.message : 'Không thể tải danh sách người dùng.');
+      }
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (isAdmin) load();
   }, [isAdmin, load]);
+  usePolling(() => {
+    if (isAdmin) load({ silent: true });
+  }, 15000);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,7 +133,7 @@ export default function UsersPage() {
           <p className="eyebrow">QUẢN TRỊ</p>
           <h1>Người dùng hệ thống</h1>
         </div>
-        <button className="button ghost small" onClick={load} disabled={loading}>
+        <button className="button ghost small" onClick={() => load()} disabled={loading}>
           Làm mới
         </button>
       </div>
