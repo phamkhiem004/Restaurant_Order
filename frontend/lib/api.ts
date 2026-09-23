@@ -191,6 +191,16 @@ export const classSchedulesApi = {
   join: (id: number) => post<{ token: string }>(`/class-schedules/${id}/join`),
 };
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export const chatApi = {
+  send: (message: string, history: ChatMessage[]) =>
+    post<{ reply: string }>('/chat', { message, history }),
+};
+
 export interface QuickStartPayload {
   title?: string;
   name: string;

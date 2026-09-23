@@ -1,8 +1,10 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AiModule } from './ai/ai.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { ChatModule } from './chat/chat.module';
 import { ClassSchedulesModule } from './class-schedules/class-schedules.module';
 import { D1DatabaseModule } from './database/d1.module';
 import { DiningTablesModule } from './dining-tables/dining-tables.module';
@@ -16,12 +18,13 @@ import { VnpayModule } from './vnpay/vnpay.module';
 
 @Module({})
 export class AppModule {
-  static forD1(database: D1Database): DynamicModule {
+  static forD1(database: D1Database, ai: Ai): DynamicModule {
     return {
       module: AppModule,
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         D1DatabaseModule.forRoot(database),
+        AiModule.forRoot(ai),
         AuthModule,
         UsersModule,
         MenuItemsModule,
@@ -32,6 +35,7 @@ export class AppModule {
         RealtimeKitModule,
         VnpayModule,
         ClassSchedulesModule,
+        ChatModule,
       ],
       controllers: [AppController],
       providers: [AppService],

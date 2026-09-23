@@ -47,4 +47,8 @@
       "migrations_dir": "migrations",
     },
   ],
+  "ai": {
+    "binding": "AI",
+    "remote": true,
+  },
 }

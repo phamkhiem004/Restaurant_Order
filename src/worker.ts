@@ -6,6 +6,7 @@ type NodeHttpHandler = ReturnType<typeof httpServerHandler>;
 
 interface WorkerEnv {
   DB: D1Database;
+  AI: Ai;
   ASSETS: Fetcher;
   VNP_TMN_CODE?: string;
   VNP_HASH_SECRET?: string;
@@ -348,7 +349,7 @@ async function createNestHandler(env: WorkerEnv): Promise<NodeHttpHandler> {
   copyBindingToProcessEnv(env);
 
   const { createNestApp } = await import('./bootstrap.js');
-  const app = await createNestApp(env.DB);
+  const app = await createNestApp(env.DB, env.AI);
   await app.init();
 
   const server = app.getHttpServer() as Parameters<typeof httpServerHandler>[0];
