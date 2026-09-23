@@ -1,77 +1,204 @@
 'use client';
 
 import Image from 'next/image';
-import { FormEvent, useState } from 'react';
-import { realtimekitApi } from '../../../lib/api';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { Badge } from '../../../components/Badge';
+import { classSchedulesApi, usersApi } from '../../../lib/api';
+import { formatDateTime, formatPrice, toDatetimeLocalInput } from '../../../lib/format';
+import {
+  classEnrollmentStatusLabel,
+  classEnrollmentStatusTone,
+  classScheduleStatusLabel,
+  classScheduleStatusTone,
+} from '../../../lib/labels';
 import { useSession } from '../../../lib/session';
-
-interface QuickStartResponse {
-  meeting: { id: string; title?: string };
-  joinUrl: string;
-}
+import type { ClassEnrollment, ClassSchedule, User } from '../../../lib/types';
 
 export default function ClassesPage() {
   const { user, loading: checkingSession } = useSession();
+  const [schedules, setSchedules] = useState<ClassSchedule[]>([]);
+  const [myEnrollments, setMyEnrollments] = useState<ClassEnrollment[]>([]);
+  const [customers, setCustomers] = useState<User[]>([]);
+  const [rosters, setRosters] = useState<Record<number, ClassEnrollment[]>>({});
+  const [expandedRosterId, setExpandedRosterId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [meetingId, setMeetingId] = useState('');
-  const [createdMeeting, setCreatedMeeting] =
-    useState<QuickStartResponse | null>(null);
 
   const isStaff = user?.role === 'STAFF' || user?.role === 'ADMIN';
 
-  async function createMeeting(event: FormEvent<HTMLFormElement>) {
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [scheduleList, enrollmentList] = await Promise.all([
+        classSchedulesApi.list(),
+        user ? classSchedulesApi.myEnrollments() : Promise.resolve([]),
+      ]);
+      setSchedules(scheduleList);
+      setMyEnrollments(enrollmentList);
+      setError('');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Không thể tải lịch dạy nấu ăn.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!checkingSession) load();
+  }, [checkingSession, load]);
+
+  useEffect(() => {
+    if (!isStaff) return;
+    usersApi
+      .list()
+      .then(setCustomers)
+      .catch(() => setCustomers([]));
+  }, [isStaff]);
+
+  const customerNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    customers.forEach((customer) => map.set(customer.id, customer.name));
+    return map;
+  }, [customers]);
+
+  const myEnrollmentByScheduleId = useMemo(() => {
+    const map = new Map<number, ClassEnrollment>();
+    myEnrollments.forEach((enrollment) => {
+      if (enrollment.status !== 'CANCELLED') {
+        map.set(enrollment.classScheduleId, enrollment);
+      }
+    });
+    return map;
+  }, [myEnrollments]);
+
+  async function handleCreateSchedule(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!user) return;
     setBusy(true);
     setMessage('');
+    setError('');
     const form = new FormData(event.currentTarget);
+    const localTime = String(form.get('scheduledAt') ?? '');
     try {
-      const result = await realtimekitApi.quickStart({
-        title:
-          String(form.get('title') ?? '').trim() ||
-          'Lớp dạy nấu ăn online',
-        name: user.name,
-        role: 'host',
-        persistChat: true,
+      await classSchedulesApi.create({
+        title: String(form.get('title') ?? '').trim(),
+        description: String(form.get('description') ?? '').trim() || undefined,
+        scheduledAt: new Date(localTime).toISOString(),
+        durationMinutes: Number(form.get('durationMinutes')) || undefined,
+        price: form.get('price') ? Number(form.get('price')) : undefined,
+        capacity: form.get('capacity') ? Number(form.get('capacity')) : undefined,
       });
-      setCreatedMeeting(result);
-      setMeetingId(result.meeting.id);
-      setMessage(
-        'Đã mở lớp học. Bạn có thể vào lớp hoặc gửi mã lớp cho học viên.',
-      );
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : 'Không thể mở lớp học.',
-      );
+      setMessage('Đã lập lịch buổi học mới.');
+      (event.target as HTMLFormElement).reset();
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể lập lịch buổi học.');
     } finally {
       setBusy(false);
     }
   }
 
-  async function joinMeeting(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!user || !meetingId.trim()) return;
+  async function handleStart(id: number) {
     setBusy(true);
-    setMessage('');
+    setError('');
     try {
-      const participant = await realtimekitApi.addParticipant(
-        meetingId.trim(),
-        {
-          name: user.name,
-          role: user.role === 'CUSTOMER' ? 'guest' : 'host',
-        },
-      );
-      window.location.assign(
-        `/meeting?authToken=${encodeURIComponent(participant.token)}`,
-      );
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : 'Không thể vào lớp học.',
-      );
+      const result = await classSchedulesApi.start(id);
+      window.location.assign(result.joinUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể bắt đầu lớp.');
       setBusy(false);
     }
   }
+
+  async function handleCancelSchedule(id: number) {
+    setBusy(true);
+    setError('');
+    try {
+      await classSchedulesApi.cancel(id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể hủy buổi học.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleComplete(id: number) {
+    setBusy(true);
+    setError('');
+    try {
+      await classSchedulesApi.complete(id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể cập nhật buổi học.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleRoster(id: number) {
+    if (expandedRosterId === id) {
+      setExpandedRosterId(null);
+      return;
+    }
+    setExpandedRosterId(id);
+    if (!rosters[id]) {
+      try {
+        const roster = await classSchedulesApi.enrollmentsFor(id);
+        setRosters((current) => ({ ...current, [id]: roster }));
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Không thể tải danh sách học viên.',
+        );
+      }
+    }
+  }
+
+  async function payForEnrollment(enrollmentId: number) {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await classSchedulesApi.createPaymentUrl(enrollmentId);
+      window.open(result.url, '_blank', 'noopener,noreferrer');
+      setMessage('Đã mở trang thanh toán VNPay ở tab mới.');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tạo link thanh toán.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleEnroll(id: number) {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const enrollment = await classSchedulesApi.enroll(id);
+      await payForEnrollment(enrollment.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể đăng ký buổi học.');
+      setBusy(false);
+    }
+  }
+
+  async function handleJoin(id: number) {
+    setBusy(true);
+    setError('');
+    try {
+      const result = await classSchedulesApi.join(id);
+      window.location.assign(`/meeting?authToken=${encodeURIComponent(result.token)}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể vào lớp học.');
+      setBusy(false);
+    }
+  }
+
+  const defaultDateTime = toDatetimeLocalInput(new Date(Date.now() + 60 * 60000));
 
   return (
     <main className="page">
@@ -80,14 +207,17 @@ export default function ClassesPage() {
           <p className="eyebrow">LỚP HỌC TRỰC TUYẾN</p>
           <h1>Dạy nấu ăn online</h1>
         </div>
+        <button className="button ghost small" onClick={load} disabled={loading}>
+          Làm mới
+        </button>
       </div>
 
       <section className="classes-hero">
         <div className="classes-hero-copy">
           <p>
-            Đầu bếp hướng dẫn công thức trực tiếp qua video call. Nhân viên
-            và quản trị viên mở lớp với vai trò giáo viên; khách hàng tham
-            gia lớp với vai trò học viên, có thể đặt câu hỏi trực tiếp.
+            Đầu bếp hướng dẫn công thức trực tiếp qua video call. Quản trị
+            viên lên lịch buổi học bên dưới; khách hàng đăng ký và thanh toán
+            theo buổi để mở khóa phòng học khi lớp bắt đầu.
           </p>
         </div>
         <div className="classes-hero-media">
@@ -102,74 +232,204 @@ export default function ClassesPage() {
       </section>
 
       {checkingSession ? null : !user ? (
-        <p className="banner">Đăng nhập để mở hoặc tham gia lớp học nấu ăn.</p>
-      ) : (
-        <section className="panel manage-panel meeting-panel">
+        <p className="banner">Đăng nhập để đăng ký và tham gia buổi học nấu ăn.</p>
+      ) : null}
+
+      {error && <p className="banner banner-danger">{error}</p>}
+      {message && <p className="form-message form-message-success">{message}</p>}
+
+      {isStaff && (
+        <section className="panel manage-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">LỚP HỌC</p>
-              <h2>Mở lớp hoặc tham gia</h2>
+              <p className="eyebrow">LẬP LỊCH</p>
+              <h2>Thêm buổi học mới</h2>
             </div>
-            <span className="live-pill">LIVE</span>
           </div>
-
-          {isStaff && (
-            <form className="inline-form" onSubmit={createMeeting}>
-              <label>
-                Tên lớp học
-                <input
-                  name="title"
-                  placeholder="Lớp dạy Phở Bò cùng đầu bếp"
-                  maxLength={200}
-                />
-              </label>
-              <button className="button primary" disabled={busy}>
-                Mở lớp học (vai trò giáo viên)
-              </button>
-            </form>
-          )}
-
-          <form className="inline-form join-form" onSubmit={joinMeeting}>
-            <label>
-              Mã lớp học
+          <form className="field-grid" onSubmit={handleCreateSchedule}>
+            <label className="field-span">
+              Tên buổi học
               <input
-                value={meetingId}
-                onChange={(event) => setMeetingId(event.target.value)}
-                placeholder="Dán mã lớp học vào đây"
+                name="title"
+                required
+                maxLength={200}
+                placeholder="Lớp dạy Phở Bò cùng đầu bếp"
+              />
+            </label>
+            <label>
+              Thời gian bắt đầu
+              <input
+                type="datetime-local"
+                name="scheduledAt"
+                defaultValue={defaultDateTime}
                 required
               />
             </label>
-            <button className="button secondary" disabled={busy}>
-              {user.role === 'CUSTOMER'
-                ? 'Tham gia lớp học (học viên)'
-                : 'Tham gia lớp học (giáo viên)'}
+            <label>
+              Thời lượng (phút)
+              <input type="number" name="durationMinutes" min={15} defaultValue={60} />
+            </label>
+            <label>
+              Giá / buổi (VNĐ)
+              <input type="number" name="price" min={0} step={1000} defaultValue={30000} />
+            </label>
+            <label>
+              Sức chứa (để trống nếu không giới hạn)
+              <input type="number" name="capacity" min={1} />
+            </label>
+            <label className="field-span">
+              Mô tả
+              <textarea
+                name="description"
+                rows={2}
+                placeholder="Công thức, nguyên liệu cần chuẩn bị…"
+              />
+            </label>
+            <button className="button primary" disabled={busy}>
+              Lập lịch
             </button>
           </form>
-
-          {createdMeeting && (
-            <div className="meeting-result">
-              <div>
-                <span>Mã lớp học</span>
-                <code>{createdMeeting.meeting.id}</code>
-              </div>
-              <div className="result-actions">
-                <button
-                  className="button ghost small"
-                  onClick={() =>
-                    navigator.clipboard.writeText(createdMeeting.meeting.id)
-                  }
-                >
-                  Sao chép mã
-                </button>
-                <a className="button primary small" href={createdMeeting.joinUrl}>
-                  Vào lớp (giáo viên)
-                </a>
-              </div>
-            </div>
-          )}
-          {message && <p className="form-message">{message}</p>}
         </section>
       )}
+
+      <div className="class-schedule-list">
+        {loading ? (
+          <p className="empty">Đang tải lịch dạy nấu ăn…</p>
+        ) : schedules.length ? (
+          schedules.map((schedule) => {
+            const enrollment = myEnrollmentByScheduleId.get(schedule.id);
+            const roster = rosters[schedule.id];
+            return (
+              <article className="class-card" key={schedule.id}>
+                <div className="class-card-head">
+                  <div>
+                    <h3>{schedule.title}</h3>
+                    <p className="hint">
+                      {formatDateTime(schedule.scheduledAt)} · {schedule.durationMinutes} phút
+                    </p>
+                  </div>
+                  <Badge tone={classScheduleStatusTone[schedule.status]}>
+                    {classScheduleStatusLabel[schedule.status]}
+                  </Badge>
+                </div>
+
+                {schedule.description && <p>{schedule.description}</p>}
+
+                <div className="class-card-meta">
+                  <span>{formatPrice(schedule.price)} / buổi</span>
+                  {schedule.capacity && <span>Sức chứa: {schedule.capacity} học viên</span>}
+                </div>
+
+                {isStaff && (
+                  <div className="row-actions">
+                    {schedule.status === 'SCHEDULED' && (
+                      <>
+                        <button
+                          className="button primary small"
+                          disabled={busy}
+                          onClick={() => handleStart(schedule.id)}
+                        >
+                          Bắt đầu lớp
+                        </button>
+                        <button
+                          className="button ghost small danger"
+                          disabled={busy}
+                          onClick={() => handleCancelSchedule(schedule.id)}
+                        >
+                          Hủy lớp
+                        </button>
+                      </>
+                    )}
+                    {schedule.status === 'LIVE' && (
+                      <>
+                        <button
+                          className="button primary small"
+                          disabled={busy}
+                          onClick={() => handleJoin(schedule.id)}
+                        >
+                          Vào lớp (giáo viên)
+                        </button>
+                        <button
+                          className="button ghost small"
+                          disabled={busy}
+                          onClick={() => handleComplete(schedule.id)}
+                        >
+                          Đánh dấu hoàn tất
+                        </button>
+                      </>
+                    )}
+                    <button
+                      className="button ghost small"
+                      onClick={() => toggleRoster(schedule.id)}
+                    >
+                      {expandedRosterId === schedule.id
+                        ? 'Ẩn danh sách học viên'
+                        : 'Xem danh sách học viên'}
+                    </button>
+                  </div>
+                )}
+
+                {isStaff && expandedRosterId === schedule.id && (
+                  <ul className="class-roster">
+                    {roster?.length ? (
+                      roster.map((item) => (
+                        <li key={item.id}>
+                          <span>
+                            {customerNameById.get(item.userId) ?? `Người dùng #${item.userId}`}
+                          </span>
+                          <Badge tone={classEnrollmentStatusTone[item.status]}>
+                            {classEnrollmentStatusLabel[item.status]}
+                          </Badge>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="empty">Chưa có học viên đăng ký.</li>
+                    )}
+                  </ul>
+                )}
+
+                {!isStaff && user && (
+                  <div className="row-actions">
+                    {schedule.status === 'CANCELLED' ? (
+                      <p className="hint">Buổi học này đã bị hủy.</p>
+                    ) : schedule.status === 'COMPLETED' ? (
+                      <p className="hint">Buổi học đã kết thúc.</p>
+                    ) : !enrollment ? (
+                      <button
+                        className="button primary small"
+                        disabled={busy}
+                        onClick={() => handleEnroll(schedule.id)}
+                      >
+                        Đăng ký &amp; thanh toán ({formatPrice(schedule.price)})
+                      </button>
+                    ) : enrollment.status === 'PENDING_PAYMENT' ? (
+                      <button
+                        className="button primary small"
+                        disabled={busy}
+                        onClick={() => payForEnrollment(enrollment.id)}
+                      >
+                        Thanh toán ({formatPrice(enrollment.amount)})
+                      </button>
+                    ) : schedule.status === 'LIVE' ? (
+                      <button
+                        className="button primary small"
+                        disabled={busy}
+                        onClick={() => handleJoin(schedule.id)}
+                      >
+                        Vào lớp
+                      </button>
+                    ) : (
+                      <p className="hint">Đã thanh toán — chờ lớp bắt đầu đúng giờ.</p>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })
+        ) : (
+          <p className="empty">Chưa có buổi học nào được lên lịch.</p>
+        )}
+      </div>
     </main>
   );
 }

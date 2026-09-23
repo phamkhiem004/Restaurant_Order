@@ -1,4 +1,6 @@
 import type {
+  ClassEnrollment,
+  ClassSchedule,
   DiningTable,
   MenuItem,
   Order,
@@ -157,6 +159,36 @@ export const vnpayApi = {
     get<{ message: string; url: string }>(
       `/vnpay/create-payment-url?orderId=${orderId}`,
     ),
+};
+
+export interface CreateClassSchedulePayload {
+  title: string;
+  description?: string;
+  scheduledAt: string;
+  durationMinutes?: number;
+  price?: number;
+  capacity?: number;
+}
+
+export const classSchedulesApi = {
+  list: () => get<ClassSchedule[]>('/class-schedules'),
+  myEnrollments: () => get<ClassEnrollment[]>('/class-schedules/my-enrollments'),
+  enrollmentsFor: (scheduleId: number) =>
+    get<ClassEnrollment[]>(`/class-schedules/${scheduleId}/enrollments`),
+  create: (data: CreateClassSchedulePayload) =>
+    post<ClassSchedule>('/class-schedules', data),
+  start: (id: number) =>
+    patch<{ meetingId: string; joinUrl: string }>(`/class-schedules/${id}/start`),
+  cancel: (id: number) =>
+    patch<{ message: string }>(`/class-schedules/${id}/cancel`),
+  complete: (id: number) =>
+    patch<{ message: string }>(`/class-schedules/${id}/complete`),
+  enroll: (id: number) => post<ClassEnrollment>(`/class-schedules/${id}/enroll`),
+  createPaymentUrl: (enrollmentId: number) =>
+    post<{ message: string; url: string }>(
+      `/class-schedules/enrollments/${enrollmentId}/pay`,
+    ),
+  join: (id: number) => post<{ token: string }>(`/class-schedules/${id}/join`),
 };
 
 export interface QuickStartPayload {

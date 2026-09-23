@@ -7,5 +7,6 @@ import { RealtimeKitService } from './realtimekit.service';
   imports: [AuthModule],
   controllers: [RealtimeKitController],
   providers: [RealtimeKitService],
+  exports: [RealtimeKitService],
 })
 export class RealtimeKitModule {}

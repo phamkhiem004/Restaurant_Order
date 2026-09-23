@@ -82,3 +82,29 @@ export interface OrderItem {
   priceAtTime: number | string;
   status: OrderItemStatus | null;
 }
+
+export type ClassScheduleStatus = 'SCHEDULED' | 'LIVE' | 'COMPLETED' | 'CANCELLED';
+export type ClassEnrollmentStatus = 'PENDING_PAYMENT' | 'PAID' | 'CANCELLED';
+
+export interface ClassSchedule {
+  id: number;
+  title: string;
+  description: string | null;
+  scheduledAt: string;
+  durationMinutes: number;
+  price: number | string;
+  capacity: number | null;
+  status: ClassScheduleStatus;
+  meetingId: string | null;
+  createdBy: number;
+}
+
+export interface ClassEnrollment {
+  id: number;
+  classScheduleId: number;
+  userId: number;
+  status: ClassEnrollmentStatus;
+  amount: number | string;
+  vnpTxnRef: string | null;
+  paidAt: string | null;
+}

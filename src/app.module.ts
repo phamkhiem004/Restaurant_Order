@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { ClassSchedulesModule } from './class-schedules/class-schedules.module';
 import { D1DatabaseModule } from './database/d1.module';
 import { DiningTablesModule } from './dining-tables/dining-tables.module';
 import { MenuItemsModule } from './menu-items/menu-items.module';
@@ -30,6 +31,7 @@ export class AppModule {
         PaymentsModule,
         RealtimeKitModule,
         VnpayModule,
+        ClassSchedulesModule,
       ],
       controllers: [AppController],
       providers: [AppService],

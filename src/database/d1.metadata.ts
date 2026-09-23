@@ -1,3 +1,5 @@
+import { ClassEnrollment } from '../class-schedules/entities/class-enrollment.entity';
+import { ClassSchedule } from '../class-schedules/entities/class-schedule.entity';
 import { DiningTable } from '../dining-tables/entities/dining-table.entity';
 import { MenuItem } from '../menu-items/entities/menu_item.entity';
 import { OrderItem } from '../orders/entities/order-item.entity';
@@ -154,6 +156,45 @@ const metadata = new Map<EntityConstructor, D1EntityMetadata>([
         ...timestamps,
       },
       dates: ['createdAt', 'updatedAt'],
+    },
+  ],
+  [
+    ClassSchedule,
+    {
+      entity: ClassSchedule,
+      table: 'class_schedules',
+      columns: {
+        id: 'id',
+        title: 'title',
+        description: 'description',
+        scheduledAt: 'scheduled_at',
+        durationMinutes: 'duration_minutes',
+        price: 'price',
+        capacity: 'capacity',
+        status: 'status',
+        meetingId: 'meeting_id',
+        createdBy: 'created_by',
+        ...timestamps,
+      },
+      dates: ['scheduledAt', 'createdAt', 'updatedAt'],
+    },
+  ],
+  [
+    ClassEnrollment,
+    {
+      entity: ClassEnrollment,
+      table: 'class_enrollments',
+      columns: {
+        id: 'id',
+        classScheduleId: 'class_schedule_id',
+        userId: 'user_id',
+        status: 'status',
+        amount: 'amount',
+        vnpTxnRef: 'vnp_txn_ref',
+        paidAt: 'paid_at',
+        ...timestamps,
+      },
+      dates: ['paidAt', 'createdAt', 'updatedAt'],
     },
   ],
 ]);

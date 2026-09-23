@@ -63,3 +63,29 @@ export const tableStatusTone: Record<string, Tone> = {
   MAINTENANCE: 'danger',
   RESERVED: 'info',
 };
+
+export const classScheduleStatusLabel: Record<string, string> = {
+  SCHEDULED: 'Đã lên lịch',
+  LIVE: 'Đang diễn ra',
+  COMPLETED: 'Đã kết thúc',
+  CANCELLED: 'Đã hủy',
+};
+
+export const classScheduleStatusTone: Record<string, Tone> = {
+  SCHEDULED: 'info',
+  LIVE: 'success',
+  COMPLETED: 'neutral',
+  CANCELLED: 'danger',
+};
+
+export const classEnrollmentStatusLabel: Record<string, string> = {
+  PENDING_PAYMENT: 'Chờ thanh toán',
+  PAID: 'Đã thanh toán',
+  CANCELLED: 'Đã hủy',
+};
+
+export const classEnrollmentStatusTone: Record<string, Tone> = {
+  PENDING_PAYMENT: 'warning',
+  PAID: 'success',
+  CANCELLED: 'danger',
+};
