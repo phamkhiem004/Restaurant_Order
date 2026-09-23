@@ -16,6 +16,7 @@ interface EditState {
   category: string;
   sale_price: string;
   is_flash_sale: boolean;
+  imageUrl: string;
 }
 
 function toEditState(item: MenuItem): EditState {
@@ -26,7 +27,12 @@ function toEditState(item: MenuItem): EditState {
     category: item.category ?? '',
     sale_price: item.sale_price ? String(item.sale_price) : '',
     is_flash_sale: Boolean(item.is_flash_sale),
+    imageUrl: item.imageUrl ?? '',
   };
+}
+
+function photoSrcFor(item: MenuItem): string | null {
+  return item.imageUrl || findDishPhoto(item.name)?.photo || null;
 }
 
 export default function MenuPage() {
@@ -93,6 +99,7 @@ export default function MenuPage() {
         description: String(form.get('description') ?? '').trim() || undefined,
         price: Number(form.get('price')),
         category: String(form.get('category') ?? '').trim() || undefined,
+        imageUrl: String(form.get('imageUrl') ?? '').trim() || undefined,
       });
       setMessage('Đã thêm món ăn mới.');
       (event.target as HTMLFormElement).reset();
@@ -124,6 +131,7 @@ export default function MenuPage() {
         category: editState.category.trim() || undefined,
         sale_price: editState.sale_price ? Number(editState.sale_price) : 0,
         is_flash_sale: editState.is_flash_sale,
+        imageUrl: editState.imageUrl.trim() || null,
       });
       setMessage('Đã cập nhật món ăn.');
       setEditingId(null);
@@ -172,13 +180,13 @@ export default function MenuPage() {
           <p className="empty">Đang tải thực đơn…</p>
         ) : filteredMenu.length ? (
           filteredMenu.map((item) => {
-            const photo = findDishPhoto(item.name);
+            const photo = photoSrcFor(item);
             return (
               <article className="menu-card" key={item.id}>
                 <div className="menu-card-media">
                   {photo ? (
                     <Image
-                      src={photo.photo}
+                      src={photo}
                       alt={item.name}
                       fill
                       sizes="(max-width: 850px) 50vw, 33vw"
@@ -248,6 +256,10 @@ export default function MenuPage() {
               <input name="price" type="number" min={0} step={1000} required />
             </label>
             <label className="field-span">
+              Đường dẫn ảnh (URL, tùy chọn)
+              <input name="imageUrl" type="url" placeholder="https://example.com/mon-an.jpg" />
+            </label>
+            <label className="field-span">
               Mô tả
               <textarea name="description" rows={2} />
             </label>
@@ -311,6 +323,17 @@ export default function MenuPage() {
                     value={editState.sale_price}
                     onChange={(event) =>
                       setEditState({ ...editState, sale_price: event.target.value })
+                    }
+                  />
+                </label>
+                <label className="field-span">
+                  Đường dẫn ảnh (URL, để trống nếu không có)
+                  <input
+                    type="url"
+                    placeholder="https://example.com/mon-an.jpg"
+                    value={editState.imageUrl}
+                    onChange={(event) =>
+                      setEditState({ ...editState, imageUrl: event.target.value })
                     }
                   />
                 </label>

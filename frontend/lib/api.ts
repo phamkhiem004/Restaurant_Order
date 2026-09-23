@@ -79,12 +79,14 @@ export interface MenuItemPayload {
   category?: string;
   sale_price?: number;
   is_flash_sale?: boolean;
+  imageUrl?: string | null;
 }
 
 export const menuItemsApi = {
   list: () => get<MenuItem[]>('/menu-items'),
-  create: (data: Pick<MenuItemPayload, 'name' | 'description' | 'price' | 'category'>) =>
-    post<MenuItem>('/menu-items', data),
+  create: (
+    data: Pick<MenuItemPayload, 'name' | 'description' | 'price' | 'category' | 'imageUrl'>,
+  ) => post<MenuItem>('/menu-items', data),
   update: (id: number, data: MenuItemPayload) =>
     patch(`/menu-items/${id}`, data),
 };

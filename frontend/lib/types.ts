@@ -22,6 +22,7 @@ export interface MenuItem {
   is_flash_sale?: boolean;
   category: string | null;
   isActive?: boolean | null;
+  imageUrl?: string | null;
 }
 
 export type TableStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE';

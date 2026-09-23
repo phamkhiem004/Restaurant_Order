@@ -67,7 +67,7 @@ export default function Home() {
       item.name.toLowerCase().includes(dish.keyword),
     );
     return {
-      photo: dish.photo,
+      photo: matched?.imageUrl || dish.photo,
       name: matched?.name ?? dish.label,
       price: matched ? formatPrice(effectivePrice(matched)) : null,
     };

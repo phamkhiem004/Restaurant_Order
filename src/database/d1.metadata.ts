@@ -74,6 +74,7 @@ const metadata = new Map<EntityConstructor, D1EntityMetadata>([
         isActive: 'is_active',
         sale_price: 'sale_price',
         is_flash_sale: 'is_flash_sale',
+        imageUrl: 'image_url',
         ...timestamps,
       },
       dates: ['createdAt', 'updatedAt'],

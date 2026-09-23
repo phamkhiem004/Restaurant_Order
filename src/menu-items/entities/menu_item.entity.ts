@@ -31,6 +31,9 @@ export class MenuItem {
   @Column('varchar', { name: 'category', nullable: true, length: 50 })
   category: string | null;
 
+  @Column('varchar', { name: 'image_url', nullable: true, length: 500 })
+  imageUrl: string | null;
+
   @Column({
     type: 'boolean',
     name: 'is_active',
