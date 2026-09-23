@@ -4,7 +4,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Restaurant Hub',
-  description: 'Restaurant management and RealtimeKit meeting demo',
+  description:
+    'Restaurant management app with live online cooking classes powered by RealtimeKit',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

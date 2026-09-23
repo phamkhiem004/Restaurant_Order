@@ -59,28 +59,49 @@ function HostWaitingRoomControls() {
         className="waiting-room-toggle"
         type="button"
         aria-expanded={!isCollapsed}
+        aria-label={
+          isCollapsed ? 'Mở danh sách học viên chờ' : 'Thu gọn danh sách học viên chờ'
+        }
+        title={isCollapsed ? `Học viên chờ: ${waitingParticipants.length}` : ''}
         onClick={() => setIsCollapsed((current) => !current)}
       >
-        <strong>Phòng chờ: {waitingParticipants.length}</strong>
-        <span aria-hidden="true">{isCollapsed ? '▾' : '▴'}</span>
+        {isCollapsed ? (
+          <span className="waiting-room-compact" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img">
+              <circle cx="9" cy="8" r="3" />
+              <path d="M3.5 19v-1.5A4.5 4.5 0 0 1 8 13h2a4.5 4.5 0 0 1 4.5 4.5V19" />
+              <path d="M16 5v6M13 8h6" />
+            </svg>
+            {waitingParticipants.length > 0 && (
+              <span>{waitingParticipants.length}</span>
+            )}
+          </span>
+        ) : (
+          <>
+            <strong>Học viên chờ: {waitingParticipants.length}</strong>
+            <span className="waiting-room-close" aria-hidden="true">
+              ×
+            </span>
+          </>
+        )}
       </button>
 
       {!isCollapsed && (
         <div className="waiting-room-content">
           <span className="waiting-meeting-id" title={meetingId}>
-            Meeting: {meetingId}
+            Lớp học: {meetingId}
           </span>
 
           {waitingParticipants.length === 0 && (
-            <span className="waiting-empty">Chưa có yêu cầu tham gia.</span>
+            <span className="waiting-empty">Chưa có học viên nào chờ vào lớp.</span>
           )}
 
           {waitingParticipants.map((participant) => (
             <div className="waiting-person" key={participant.id}>
-              <span>{participant.name || 'Khách chưa đặt tên'}</span>
+              <span>{participant.name || 'Học viên chưa đặt tên'}</span>
               <div>
                 <button onClick={() => acceptParticipant(participant.id)}>
-                  Chấp nhận
+                  Cho vào lớp
                 </button>
                 <button
                   className="reject"
@@ -109,7 +130,7 @@ export default function MeetingPage() {
     );
 
     if (!authToken) {
-      setError('Liên kết phòng họp không có authToken hợp lệ.');
+      setError('Liên kết lớp học không hợp lệ.');
       return;
     }
 
@@ -123,7 +144,7 @@ export default function MeetingPage() {
       setError(
         reason instanceof Error
           ? reason.message
-          : 'Không thể khởi tạo phòng họp.',
+          : 'Không thể khởi tạo lớp học.',
       );
     });
   }, [initMeeting]);
@@ -142,7 +163,7 @@ export default function MeetingPage() {
   if (error) {
     return (
       <main className="meeting-status meeting-error">
-        <h1>Không thể mở phòng họp</h1>
+        <h1>Không thể vào lớp học</h1>
         <p>{error}</p>
         <a href="/">Quay lại trang chính</a>
       </main>
@@ -150,7 +171,7 @@ export default function MeetingPage() {
   }
 
   if (!meeting) {
-    return <main className="meeting-status">Đang tải phòng họp…</main>;
+    return <main className="meeting-status">Đang tải lớp học…</main>;
   }
 
   return (
