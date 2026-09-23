@@ -3,7 +3,12 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge } from '../../../components/Badge';
 import { diningTablesApi, reservationsApi, usersApi } from '../../../lib/api';
-import { formatDateTime, toDatetimeLocalInput } from '../../../lib/format';
+import {
+  formatDateTime,
+  formatShortDate,
+  formatTime,
+  toDatetimeLocalInput,
+} from '../../../lib/format';
 import { reservationStatusLabel, reservationStatusTone } from '../../../lib/labels';
 import { useSession } from '../../../lib/session';
 import type {
@@ -230,99 +235,88 @@ export default function ReservationsPage() {
         ))}
       </div>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              {isStaff && <th>Khách hàng</th>}
-              <th>Bàn</th>
-              <th>Bắt đầu</th>
-              <th>Kết thúc</th>
-              <th>Số khách</th>
-              <th>Ghi chú</th>
-              <th>Trạng thái</th>
-              <th>Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={9} className="empty">
-                  Đang tải…
-                </td>
-              </tr>
-            ) : visibleReservations.length ? (
-              visibleReservations.map((reservation) => {
-                const isOwner = reservation.userId === user?.id;
-                const canCancel =
-                  (isStaff || isOwner) &&
-                  (reservation.status === 'PENDING' ||
-                    reservation.status === 'CONFIRMED');
-                return (
-                  <tr key={reservation.id}>
-                    <td>#{reservation.id}</td>
-                    {isStaff && (
-                      <td>
-                        {customerNameById.get(reservation.userId) ??
-                          `Người dùng #${reservation.userId}`}
-                      </td>
-                    )}
-                    <td>
+      <div className="booking-list">
+        {loading ? (
+          <p className="empty">Đang tải…</p>
+        ) : visibleReservations.length ? (
+          visibleReservations.map((reservation) => {
+            const isOwner = reservation.userId === user?.id;
+            const canCancel =
+              (isStaff || isOwner) &&
+              (reservation.status === 'PENDING' ||
+                reservation.status === 'CONFIRMED');
+            return (
+              <article className="booking-card" key={reservation.id}>
+                <div className="booking-card-time">
+                  <span className="booking-card-day">
+                    {formatShortDate(reservation.reservationTime)}
+                  </span>
+                  <span className="booking-card-hour">
+                    {formatTime(reservation.reservationTime)}
+                  </span>
+                </div>
+                <div className="booking-card-main">
+                  <div className="booking-card-heading">
+                    <h3>
+                      Bàn{' '}
                       {reservation.tableId
-                        ? `Bàn ${tableNameById.get(reservation.tableId) ?? reservation.tableId}`
-                        : '—'}
-                    </td>
-                    <td>{formatDateTime(reservation.reservationTime)}</td>
-                    <td>{formatDateTime(reservation.endTime)}</td>
-                    <td>{reservation.guestCount}</td>
-                    <td>{reservation.notes || '—'}</td>
-                    <td>
-                      <Badge tone={reservationStatusTone[reservation.status ?? 'PENDING']}>
-                        {reservationStatusLabel[reservation.status ?? 'PENDING']}
-                      </Badge>
-                    </td>
-                    <td className="row-actions">
-                      {isStaff && reservation.status === 'PENDING' && (
-                        <button
-                          className="button ghost small"
-                          disabled={busy}
-                          onClick={() => updateStatus(reservation.id, 'CONFIRMED')}
-                        >
-                          Xác nhận
-                        </button>
-                      )}
-                      {isStaff && reservation.status === 'CONFIRMED' && (
-                        <button
-                          className="button ghost small"
-                          disabled={busy}
-                          onClick={() => updateStatus(reservation.id, 'COMPLETED')}
-                        >
-                          Hoàn tất
-                        </button>
-                      )}
-                      {canCancel && (
-                        <button
-                          className="button ghost small danger"
-                          disabled={busy}
-                          onClick={() => updateStatus(reservation.id, 'CANCELLED')}
-                        >
-                          Hủy
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={9} className="empty">
-                  Chưa có lượt đặt bàn nào.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                        ? (tableNameById.get(reservation.tableId) ?? reservation.tableId)
+                        : '—'}{' '}
+                      · {reservation.guestCount} khách
+                    </h3>
+                    <Badge tone={reservationStatusTone[reservation.status ?? 'PENDING']}>
+                      {reservationStatusLabel[reservation.status ?? 'PENDING']}
+                    </Badge>
+                  </div>
+                  {isStaff && (
+                    <p className="hint">
+                      Khách:{' '}
+                      {customerNameById.get(reservation.userId) ??
+                        `Người dùng #${reservation.userId}`}
+                    </p>
+                  )}
+                  <p className="hint">
+                    Kết thúc dự kiến: {formatDateTime(reservation.endTime)}
+                  </p>
+                  {reservation.notes && (
+                    <p className="hint">Ghi chú: {reservation.notes}</p>
+                  )}
+                </div>
+                <div className="booking-card-actions">
+                  {isStaff && reservation.status === 'PENDING' && (
+                    <button
+                      className="button ghost small"
+                      disabled={busy}
+                      onClick={() => updateStatus(reservation.id, 'CONFIRMED')}
+                    >
+                      Xác nhận
+                    </button>
+                  )}
+                  {isStaff && reservation.status === 'CONFIRMED' && (
+                    <button
+                      className="button ghost small"
+                      disabled={busy}
+                      onClick={() => updateStatus(reservation.id, 'COMPLETED')}
+                    >
+                      Hoàn tất
+                    </button>
+                  )}
+                  {canCancel && (
+                    <button
+                      className="button ghost small danger"
+                      disabled={busy}
+                      onClick={() => updateStatus(reservation.id, 'CANCELLED')}
+                    >
+                      Hủy
+                    </button>
+                  )}
+                </div>
+              </article>
+            );
+          })
+        ) : (
+          <p className="empty">Chưa có lượt đặt bàn nào.</p>
+        )}
       </div>
     </main>
   );

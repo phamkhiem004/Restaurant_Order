@@ -1,7 +1,9 @@
 'use client';
 
+import Image from 'next/image';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { menuItemsApi } from '../../../lib/api';
+import { categoryIcon, findDishPhoto } from '../../../lib/dish-photos';
 import { formatPrice } from '../../../lib/format';
 import { useSession } from '../../../lib/session';
 import type { MenuItem } from '../../../lib/types';
@@ -164,33 +166,56 @@ export default function MenuPage() {
         {loading ? (
           <p className="empty">Đang tải thực đơn…</p>
         ) : filteredMenu.length ? (
-          filteredMenu.map((item) => (
-            <article className="menu-card" key={item.id}>
-              <div className="menu-icon">{item.name.charAt(0)}</div>
-              <span>{item.category || 'Món ăn'}</span>
-              <h3>{item.name}</h3>
-              <p>{item.description || 'Món ngon được phục vụ trong ngày.'}</p>
-              <div className="menu-price-row">
-                {item.is_flash_sale && item.sale_price ? (
-                  <>
-                    <s className="menu-old-price">{formatPrice(item.price)}</s>
-                    <strong>{formatPrice(item.sale_price)}</strong>
-                    <span className="badge badge-warning">Flash sale</span>
-                  </>
-                ) : (
-                  <strong>{formatPrice(item.price)}</strong>
-                )}
-              </div>
-              {canManage && (
-                <button
-                  className="button ghost small menu-edit-btn"
-                  onClick={() => startEdit(item)}
-                >
-                  Sửa món
-                </button>
-              )}
-            </article>
-          ))
+          filteredMenu.map((item) => {
+            const photo = findDishPhoto(item.name);
+            return (
+              <article className="menu-card" key={item.id}>
+                <div className="menu-card-media">
+                  {photo ? (
+                    <Image
+                      src={photo.photo}
+                      alt={item.name}
+                      fill
+                      sizes="(max-width: 850px) 50vw, 33vw"
+                      style={{ objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div className="menu-card-placeholder">
+                      <span>{categoryIcon(item.category)}</span>
+                    </div>
+                  )}
+                  {item.is_flash_sale && item.sale_price && (
+                    <span className="menu-card-flash-badge badge badge-warning">
+                      Flash sale
+                    </span>
+                  )}
+                </div>
+                <div className="menu-card-body">
+                  <span className="menu-card-category">{item.category || 'Món ăn'}</span>
+                  <h3>{item.name}</h3>
+                  <p>{item.description || 'Món ngon được phục vụ trong ngày.'}</p>
+                  <div className="menu-price-row">
+                    {item.is_flash_sale && item.sale_price ? (
+                      <>
+                        <s className="menu-old-price">{formatPrice(item.price)}</s>
+                        <strong>{formatPrice(item.sale_price)}</strong>
+                      </>
+                    ) : (
+                      <strong>{formatPrice(item.price)}</strong>
+                    )}
+                  </div>
+                  {canManage && (
+                    <button
+                      className="button ghost small menu-edit-btn"
+                      onClick={() => startEdit(item)}
+                    >
+                      Sửa món
+                    </button>
+                  )}
+                </div>
+              </article>
+            );
+          })
         ) : (
           <p className="empty">Không tìm thấy món ăn phù hợp.</p>
         )}

@@ -16,6 +16,23 @@ export function formatDateTime(value: string | Date | null | undefined) {
   }).format(date);
 }
 
+export function formatShortDate(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+  }).format(date);
+}
+
+export function formatTime(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
 export function toDatetimeLocalInput(date: Date) {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;

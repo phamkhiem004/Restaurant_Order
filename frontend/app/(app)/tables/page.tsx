@@ -1,10 +1,9 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { Badge } from '../../../components/Badge';
 import { diningTablesApi } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/format';
-import { tableStatusLabel, tableStatusTone } from '../../../lib/labels';
+import { tableStatusLabel } from '../../../lib/labels';
 import { useSession } from '../../../lib/session';
 import type { TableMapEntry } from '../../../lib/types';
 
@@ -63,6 +62,13 @@ export default function TablesPage() {
     {} as Record<string, number>,
   );
 
+  const legendStatuses: TableMapEntry['displayStatus'][] = [
+    'AVAILABLE',
+    'OCCUPIED',
+    'RESERVED',
+    'MAINTENANCE',
+  ];
+
   return (
     <main className="page">
       <div className="page-header">
@@ -88,30 +94,69 @@ export default function TablesPage() {
 
       {error && <p className="banner banner-danger">{error}</p>}
 
-      <div className="table-grid">
+      <section className="panel floor-plan-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">SƠ ĐỒ</p>
+            <h2>Mặt bằng nhà hàng</h2>
+          </div>
+        </div>
+
         {loading ? (
           <p className="empty">Đang tải sơ đồ bàn…</p>
         ) : tables.length ? (
-          tables.map((table) => (
-            <article className={`table-card table-card-${table.displayStatus.toLowerCase()}`} key={table.id}>
-              <div className="table-card-head">
-                <h3>Bàn {table.tableNumber}</h3>
-                <Badge tone={tableStatusTone[table.displayStatus]}>
-                  {tableStatusLabel[table.displayStatus]}
-                </Badge>
+          <>
+            <div className="floor-plan">
+              <div className="floor-plan-zone-kitchen">Khu bếp</div>
+              <div className="floor-plan-grid">
+                {tables.map((table) => {
+                  const isLong = table.capacity > 4;
+                  const size = Math.min(
+                    128,
+                    72 + Math.max(0, table.capacity - 2) * 8,
+                  );
+                  return (
+                    <div
+                      className={`floor-table floor-table-${table.displayStatus.toLowerCase()} ${isLong ? 'floor-table-long' : 'floor-table-round'}`}
+                      key={table.id}
+                      style={{
+                        width: isLong ? size * 1.5 : size,
+                        height: size,
+                      }}
+                      tabIndex={0}
+                    >
+                      <span className="floor-table-number">{table.tableNumber}</span>
+                      <span className="floor-table-capacity">{table.capacity} khách</span>
+                      <div className="floor-table-tooltip">
+                        <strong>Bàn {table.tableNumber}</strong>
+                        <br />
+                        {tableStatusLabel[table.displayStatus]} · {table.capacity} khách
+                        {table.nextReservationTime && (
+                          <>
+                            <br />
+                            Có khách đặt lúc {formatDateTime(table.nextReservationTime)}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <p>Sức chứa: {table.capacity} khách</p>
-              {table.nextReservationTime && (
-                <p className="hint">
-                  Có khách đặt lúc {formatDateTime(table.nextReservationTime)}
-                </p>
-              )}
-            </article>
-          ))
+              <div className="floor-plan-zone-entrance" />
+            </div>
+            <div className="floor-plan-legend">
+              {legendStatuses.map((status) => (
+                <span key={status}>
+                  <i className={`floor-table-${status.toLowerCase()}`} />
+                  {tableStatusLabel[status]}
+                </span>
+              ))}
+            </div>
+          </>
         ) : (
           <p className="empty">Chưa có bàn ăn nào được tạo.</p>
         )}
-      </div>
+      </section>
 
       {canManage && (
         <section className="panel manage-panel">

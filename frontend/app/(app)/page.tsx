@@ -4,16 +4,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { authApi, menuItemsApi } from '../../lib/api';
+import { DISH_PHOTOS } from '../../lib/dish-photos';
 import { formatPrice } from '../../lib/format';
-import { roleLabel } from '../../lib/labels';
 import { useSession } from '../../lib/session';
 import type { MenuItem } from '../../lib/types';
-
-const FEATURED_DISHES: { photo: string; keyword: string; fallbackName: string }[] = [
-  { photo: '/images/dish-pho-bo.jpg', keyword: 'phở bò', fallbackName: 'Phở bò' },
-  { photo: '/images/dish-com-rang.webp', keyword: 'cơm rang', fallbackName: 'Cơm rang' },
-  { photo: '/images/dish-tra-da.jpg', keyword: 'trà đá', fallbackName: 'Trà đá' },
-];
 
 function effectivePrice(item: MenuItem) {
   return item.is_flash_sale && item.sale_price ? item.sale_price : item.price;
@@ -66,13 +60,13 @@ export default function Home() {
     );
   }
 
-  const dishes = FEATURED_DISHES.map((dish) => {
+  const dishes = DISH_PHOTOS.map((dish) => {
     const matched = menu.find((item) =>
       item.name.toLowerCase().includes(dish.keyword),
     );
     return {
-      ...dish,
-      name: matched?.name ?? dish.fallbackName,
+      photo: dish.photo,
+      name: matched?.name ?? dish.label,
       price: matched ? formatPrice(effectivePrice(matched)) : null,
     };
   });
@@ -167,14 +161,7 @@ export default function Home() {
             </form>
           </div>
         </section>
-      ) : (
-        <section className="home-welcome">
-          <p>
-            Xin chào, <strong>{user.name}</strong> · Quyền:{' '}
-            <strong>{roleLabel[user.role]}</strong>
-          </p>
-        </section>
-      )}
+      ) : null}
 
       <section className="menu-section">
         <div className="section-heading">
